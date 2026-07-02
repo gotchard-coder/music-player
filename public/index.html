@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>音乐播放器</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="app">
+    <!-- 遮罩层 -->
+    <div class="mobile-overlay" id="mobileOverlay"></div>
+
+    <!-- 左侧：歌曲列表 -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div>
+          <h2>我的音乐</h2>
+          <span class="song-count" id="songCount">0 首</span>
+        </div>
+        <div class="sidebar-header-right">
+          <button id="uploadBtn" class="btn-upload">+ 上传</button>
+          <button class="btn-close-sidebar" id="closeSidebar">✕</button>
+        </div>
+      </div>
+      <div class="search-box">
+        <input type="text" id="searchInput" placeholder="搜索歌曲...">
+      </div>
+      <div class="song-list" id="songList">
+        <div class="empty-tip">暂无歌曲，点击上传</div>
+      </div>
+    </aside>
+
+    <!-- 中间：播放区域 -->
+    <main class="main">
+      <!-- 手机端菜单按钮 -->
+      <button class="btn-menu-mobile" id="menuBtn">☰</button>
+
+      <div class="player-display" id="playerDisplay">
+        <div class="cover-wrapper">
+          <div class="cover" id="cover">
+            <div class="cover-default">♪</div>
+          </div>
+        </div>
+        <div class="song-info">
+          <div class="song-title" id="songTitle">未选择歌曲</div>
+          <div class="song-artist" id="songArtist"></div>
+        </div>
+      </div>
+
+      <!-- 歌词面板 -->
+      <div class="lyrics-panel" id="lyricsPanel">
+        <div class="lyrics-header">
+          <span class="lyrics-title">歌词</span>
+          <label class="lyrics-upload-btn" id="lyricsUploadBtn" title="上传LRC歌词文件">
+            <input type="file" id="lyricsInput" accept=".lrc,.txt" style="display:none">
+            + 导入歌词
+          </label>
+        </div>
+        <div class="lyrics-content" id="lyricsContent">
+          <div class="lyrics-empty">暂无歌词</div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- 底部：播放控制栏 -->
+  <footer class="player-bar">
+    <div class="progress-bar" id="progressBar">
+      <div class="progress" id="progress"></div>
+    </div>
+    <div class="controls">
+      <div class="controls-left">
+        <span class="time" id="currentTime">00:00</span>
+        <span class="time-sep">/</span>
+        <span class="time" id="duration">00:00</span>
+      </div>
+      <div class="controls-center">
+        <button class="btn-ctrl" id="shuffleBtn" title="随机播放">⤮</button>
+        <button class="btn-ctrl" id="prevBtn" title="上一曲">⏮</button>
+        <button class="btn-ctrl btn-play" id="playBtn" title="播放">▶</button>
+        <button class="btn-ctrl" id="nextBtn" title="下一曲">⏭</button>
+        <button class="btn-ctrl" id="repeatBtn" title="列表循环">↻</button>
+        <button class="btn-ctrl" id="lyricsBtn" title="歌词">词</button>
+      </div>
+      <div class="controls-right">
+        <button class="btn-ctrl" id="volumeBtn" title="音量">🔊</button>
+        <div class="volume-slider">
+          <input type="range" id="volumeSlider" min="0" max="100" value="80">
+        </div>
+        <span class="volume-value" id="volumeValue">80</span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- 隐藏的文件输入 -->
+  <input type="file" id="fileInput" accept="audio/*" multiple style="display:none">
+
+  <!-- 上传进度弹窗 -->
+  <div class="upload-modal" id="uploadModal">
+    <div class="upload-modal-content">
+      <h3>上传中...</h3>
+      <div class="upload-progress-bar">
+        <div class="upload-progress" id="uploadProgress"></div>
+      </div>
+      <p id="uploadStatus">准备上传</p>
+    </div>
+  </div>
+
+  <script src="js/player.js"></script>
+  <script src="js/upload.js"></script>
+  <script src="js/lyrics-extract.js"></script>
+  <script src="js/lyrics.js"></script>
+  <script src="js/app.js"></script>
+
+  <!-- 右键菜单 -->
+  <div class="context-menu" id="contextMenu">
+    <div class="context-menu-item" data-action="rename">重命名</div>
+    <div class="context-menu-item" data-action="delete">删除</div>
+  </div>
+</body>
+</html>
