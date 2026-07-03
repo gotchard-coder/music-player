@@ -3,7 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#1a1a2e">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>音乐播放器</title>
+  <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -23,8 +27,28 @@
           <button class="btn-close-sidebar" id="closeSidebar">✕</button>
         </div>
       </div>
+
+      <!-- 歌单区域 -->
+      <div class="playlist-section">
+        <div class="playlist-header">
+          <span class="playlist-title">我的歌单</span>
+          <span class="playlist-count" id="playlistCount">0</span>
+          <button class="btn-add-playlist" id="playlistAddBtn" title="新建歌单">+</button>
+          <input type="text" class="playlist-name-input" id="playlistNameInput" placeholder="输入歌单名称" style="display:none">
+        </div>
+        <div class="playlist-list" id="playlistList">
+          <div class="playlist-item" id="playlistAll">
+            <span class="playlist-item-name">🎵 全部歌曲</span>
+            <span class="playlist-item-count" id="playlistAllCount">0</span>
+          </div>
+        </div>
+      </div>
+
       <div class="search-box">
         <input type="text" id="searchInput" placeholder="搜索歌曲...">
+      </div>
+      <div class="song-list-header">
+        <span class="song-list-title" id="songListTitle">全部歌曲</span>
       </div>
       <div class="song-list" id="songList">
         <div class="empty-tip">暂无歌曲，点击上传</div>
@@ -111,12 +135,32 @@
   <script src="js/upload.js"></script>
   <script src="js/lyrics-extract.js"></script>
   <script src="js/lyrics.js"></script>
+  <script src="js/playlist.js"></script>
   <script src="js/app.js"></script>
 
   <!-- 右键菜单 -->
   <div class="context-menu" id="contextMenu">
     <div class="context-menu-item" data-action="rename">重命名</div>
+    <div class="context-menu-item" data-action="add-to-playlist">添加到歌单</div>
     <div class="context-menu-item" data-action="delete">删除</div>
+  </div>
+
+  <!-- 添加到歌单子菜单 -->
+  <div class="context-menu submenu" id="addToPlaylistMenu">
+    <div class="context-menu-subtitle">选择歌单</div>
+  </div>
+
+  <!-- 歌单右键菜单 -->
+  <div class="context-menu" id="playlistContextMenu">
+    <div class="context-menu-item" data-action="rename-playlist">重命名</div>
+    <div class="context-menu-item" data-action="delete-playlist">删除歌单</div>
+  </div>
+
+  <!-- 分页控件 -->
+  <div class="pagination" id="pagination" style="display:none">
+    <button class="page-btn" id="pagePrev" disabled>‹</button>
+    <span class="page-info" id="pageInfo">1 / 1</span>
+    <button class="page-btn" id="pageNext" disabled>›</button>
   </div>
 </body>
 </html>

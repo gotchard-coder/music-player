@@ -3,6 +3,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   const player = new MusicPlayer();
   const uploader = new UploadManager(player);
   const lyrics = new LyricsManager(player);
+  const playlistManager = new PlaylistManager(player);
+  window.playlistManager = playlistManager;
 
   // 初始化音量显示
   const volVal = document.getElementById('volumeValue');
@@ -67,6 +69,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       const res = await fetch('/api/songs');
       const songs = await res.json();
       player.setSongs(songs);
+      // 加载歌单
+      await playlistManager.loadPlaylists();
     } catch (err) {
       console.error('加载歌曲失败:', err);
     }
@@ -75,11 +79,15 @@ document.addEventListener('DOMContentLoaded', async () => {
   // 搜索功能
   const searchInput = document.getElementById('searchInput');
   searchInput.addEventListener('input', (e) => {
+    player.currentPage = 1;
     player.renderList(e.target.value);
   });
 
-  // 菜单项点击
+  // 歌曲右键菜单
   const contextMenu = document.getElementById('contextMenu');
+  const addToPlaylistMenu = document.getElementById('addToPlaylistMenu');
+  let currentMenuSongId = null;
+
   contextMenu.querySelectorAll('.context-menu-item').forEach(item => {
     item.addEventListener('click', () => {
       const action = item.dataset.action;
@@ -96,11 +104,77 @@ document.addEventListener('DOMContentLoaded', async () => {
             break;
           }
         }
+      } else if (action === 'add-to-playlist') {
+        showAddToPlaylistMenu(songId, contextMenu);
       } else if (action === 'delete') {
         player.deleteSong(songId);
       }
     });
   });
+
+  // 显示"添加到歌单"子菜单
+  function showAddToPlaylistMenu(songId, parentMenu) {
+    currentMenuSongId = songId;
+    const playlists = playlistManager.playlists;
+
+    // 清空并重建菜单项
+    addToPlaylistMenu.innerHTML = '<div class="context-menu-subtitle">选择歌单</div>';
+
+    playlists.forEach(playlist => {
+      const item = document.createElement('div');
+      item.className = 'context-menu-item';
+      item.textContent = playlist.name;
+      item.dataset.playlistId = playlist.id;
+      item.addEventListener('click', async () => {
+        await playlistManager.addSongsToPlaylist(playlist.id, [songId]);
+        addToPlaylistMenu.classList.remove('visible');
+      });
+      addToPlaylistMenu.appendChild(item);
+    });
+
+    // 定位子菜单
+    const parentRect = parentMenu.getBoundingClientRect();
+    addToPlaylistMenu.style.left = (parentRect.right + 4) + 'px';
+    addToPlaylistMenu.style.top = parentRect.top + 'px';
+    addToPlaylistMenu.classList.add('visible');
+
+    // 点击其他地方关闭
+    const close = (ev) => {
+      if (!addToPlaylistMenu.contains(ev.target) && !parentMenu.contains(ev.target)) {
+        addToPlaylistMenu.classList.remove('visible');
+        document.removeEventListener('click', close);
+      }
+    };
+    setTimeout(() => document.addEventListener('click', close), 0);
+  }
+
+  // 歌单右键菜单
+  const playlistContextMenu = document.getElementById('playlistContextMenu');
+  playlistContextMenu.querySelectorAll('.context-menu-item').forEach(item => {
+    item.addEventListener('click', () => {
+      const action = item.dataset.action;
+      const playlistId = parseInt(playlistContextMenu.dataset.playlistId);
+      const playlistName = playlistContextMenu.dataset.playlistName;
+      playlistContextMenu.classList.remove('visible');
+
+      if (action === 'rename-playlist') {
+        const newName = prompt('重命名歌单', playlistName);
+        if (newName && newName.trim()) {
+          playlistManager.renamePlaylist(playlistId, newName);
+        }
+      } else if (action === 'delete-playlist') {
+        if (confirm(`确定删除歌单"${playlistName}"？`)) {
+          playlistManager.deletePlaylist(playlistId);
+        }
+      }
+    });
+  });
+
+  // 上传后刷新歌单
+  uploader.onUploadComplete = async () => {
+    await player.loadAllSongs();
+    await playlistManager.loadPlaylists();
+  };
 
   // 初始化
   await loadSongs();

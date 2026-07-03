@@ -3,13 +3,23 @@ class MusicPlayer {
   constructor() {
     this.audio = new Audio();
     this.songs = [];
+    this.allSongs = []; // 所有歌曲（用于"全部歌曲"视图）
     this.currentIndex = -1;
     this.playMode = 'list'; // list, single, random
     this.isPlaying = false;
+    this.currentPage = 1;
+    this.pageSize = 20;
 
     this.initElements();
     this.initEvents();
     this.initMediaSession();
+    this.initPagination();
+  }
+
+  escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
   }
 
   initElements() {
@@ -38,8 +48,44 @@ class MusicPlayer {
     this.shuffleBtn.addEventListener('click', () => this.toggleShuffle());
     this.repeatBtn.addEventListener('click', () => this.toggleRepeat());
 
-    // 进度条
+    // 进度条点击和拖拽
     this.progressBar.addEventListener('click', (e) => this.seek(e));
+
+    let isDragging = false;
+    const onDragMove = (e) => {
+      if (!isDragging) return;
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const rect = this.progressBar.getBoundingClientRect();
+      const percent = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+      this.progress.style.width = (percent * 100) + '%';
+      this.currentTimeEl.textContent = this.formatTime(percent * this.audio.duration);
+    };
+    const onDragEnd = (e) => {
+      if (!isDragging) return;
+      isDragging = false;
+      this._isDraggingProgress = false;
+      document.removeEventListener('mousemove', onDragMove);
+      document.removeEventListener('mouseup', onDragEnd);
+      document.removeEventListener('touchmove', onDragMove);
+      document.removeEventListener('touchend', onDragEnd);
+      const clientX = e.changedTouches ? e.changedTouches[0].clientX : e.clientX;
+      const rect = this.progressBar.getBoundingClientRect();
+      const percent = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+      this.audio.currentTime = percent * this.audio.duration;
+    };
+    this.progressBar.addEventListener('mousedown', (e) => {
+      isDragging = true;
+      this._isDraggingProgress = true;
+      document.addEventListener('mousemove', onDragMove);
+      document.addEventListener('mouseup', onDragEnd);
+    });
+    this.progressBar.addEventListener('touchstart', (e) => {
+      isDragging = true;
+      this._isDraggingProgress = true;
+      onDragMove(e);
+      document.addEventListener('touchmove', onDragMove, { passive: true });
+      document.addEventListener('touchend', onDragEnd);
+    }, { passive: true });
 
     // 音量
     this.volumeSlider.addEventListener('input', (e) => {
@@ -111,11 +157,83 @@ class MusicPlayer {
     }
   }
 
+  initPagination() {
+    this.paginationEl = document.getElementById('pagination');
+    this.pagePrevBtn = document.getElementById('pagePrev');
+    this.pageNextBtn = document.getElementById('pageNext');
+    this.pageInfoEl = document.getElementById('pageInfo');
+
+    this.pagePrevBtn.addEventListener('click', () => {
+      if (this.currentPage > 1) {
+        this.currentPage--;
+        this.renderList(document.getElementById('searchInput').value);
+      }
+    });
+
+    this.pageNextBtn.addEventListener('click', () => {
+      const totalPages = Math.ceil(this.songs.length / this.pageSize);
+      if (this.currentPage < totalPages) {
+        this.currentPage++;
+        this.renderList(document.getElementById('searchInput').value);
+      }
+    });
+  }
+
   setSongs(songs) {
     this.songs = songs;
+    this.allSongs = songs;
     // 更新歌曲数量显示
     const countEl = document.getElementById('songCount');
     if (countEl) countEl.textContent = songs.length + ' 首';
+    // 更新歌单的全部歌曲数量
+    const allCountEl = document.getElementById('playlistAllCount');
+    if (allCountEl) allCountEl.textContent = songs.length;
+    this.currentPage = 1;
+    this.renderList();
+  }
+
+  // 加载所有歌曲
+  async loadAllSongs() {
+    try {
+      const res = await fetch('/api/songs');
+      const songs = await res.json();
+      this.allSongs = songs;
+      this.songs = songs;
+      this.currentIndex = -1;
+      const countEl = document.getElementById('songCount');
+      if (countEl) countEl.textContent = songs.length + ' 首';
+      const allCountEl = document.getElementById('playlistAllCount');
+      if (allCountEl) allCountEl.textContent = songs.length;
+      this.currentPage = 1;
+      this.renderList();
+    } catch (err) {
+      console.error('加载歌曲失败:', err);
+    }
+  }
+
+  // 加载歌单歌曲
+  async loadPlaylistSongs(playlistId) {
+    try {
+      const res = await fetch(`/api/songs?playlist_id=${playlistId}`);
+      const songs = await res.json();
+      this.songs = songs;
+      this.currentIndex = -1;
+      const countEl = document.getElementById('songCount');
+      if (countEl) countEl.textContent = songs.length + ' 首';
+      this.currentPage = 1;
+      this.renderList();
+    } catch (err) {
+      console.error('加载歌单歌曲失败:', err);
+    }
+  }
+
+  // 从 allSongs 渲染（全部歌曲视图）
+  renderFromAllSongs() {
+    this.songs = this.allSongs;
+    this.currentIndex = -1;
+    const countEl = document.getElementById('songCount');
+    if (countEl) countEl.textContent = this.songs.length + ' 首';
+    this.currentPage = 1;
     this.renderList();
   }
 
@@ -126,18 +244,37 @@ class MusicPlayer {
 
     if (filtered.length === 0) {
       this.songList.innerHTML = '<div class="empty-tip">暂无歌曲，点击上传</div>';
+      this.paginationEl.style.display = 'none';
       return;
     }
 
-    this.songList.innerHTML = filtered.map((song, i) => {
+    // 分页
+    const totalPages = Math.ceil(filtered.length / this.pageSize);
+    if (this.currentPage > totalPages) this.currentPage = totalPages;
+    if (this.currentPage < 1) this.currentPage = 1;
+
+    const start = (this.currentPage - 1) * this.pageSize;
+    const pageItems = filtered.slice(start, start + this.pageSize);
+
+    // 更新分页控件
+    if (totalPages > 1) {
+      this.paginationEl.style.display = 'flex';
+      this.pageInfoEl.textContent = `${this.currentPage} / ${totalPages}`;
+      this.pagePrevBtn.disabled = this.currentPage <= 1;
+      this.pageNextBtn.disabled = this.currentPage >= totalPages;
+    } else {
+      this.paginationEl.style.display = 'none';
+    }
+
+    this.songList.innerHTML = pageItems.map((song, i) => {
       const realIndex = this.songs.findIndex(s => s.id === song.id);
       const isActive = realIndex === this.currentIndex;
       return `
         <div class="song-item ${isActive ? 'active' : ''} ${isActive && this.isPlaying ? 'playing' : ''}"
              data-index="${realIndex}">
-          <div class="song-item-index">${isActive && this.isPlaying ? '▶' : (i + 1)}</div>
+          <div class="song-item-index">${isActive && this.isPlaying ? '▶' : (start + i + 1)}</div>
           <div class="song-item-info">
-            <div class="song-item-title">${song.title}</div>
+            <div class="song-item-title">${this.escapeHtml(song.title)}</div>
           </div>
           <div class="song-item-duration">${this.formatTime(song.duration || 0)}</div>
           <button class="song-item-menu" data-id="${song.id}" title="更多">⋯</button>
@@ -194,11 +331,11 @@ class MusicPlayer {
     this.currentIndex = index;
     const song = this.songs[index];
     this.audio.src = `/api/stream/${song.id}`;
-    this.audio.play();
     this.songTitle.textContent = song.title;
     this.songArtist.textContent = song.original_name;
     this.renderList(document.getElementById('searchInput').value);
     this.updateMediaSession(song);
+    this.audio.play().catch(() => this.scheduleResume());
   }
 
   updateMediaSession(song) {
@@ -206,8 +343,13 @@ class MusicPlayer {
       navigator.mediaSession.metadata = new MediaMetadata({
         title: song.title,
         artist: '我的音乐',
-        artwork: []
+        album: '本地音乐',
+        artwork: [
+          { src: '/icon-192.png', sizes: '192x192', type: 'image/png' },
+          { src: '/icon-512.png', sizes: '512x512', type: 'image/png' }
+        ]
       });
+      navigator.mediaSession.playbackState = 'playing';
     }
   }
 
@@ -224,7 +366,7 @@ class MusicPlayer {
   }
 
   play() {
-    this.audio.play();
+    this.audio.play().catch(() => this.scheduleResume());
   }
 
   pause() {
@@ -254,6 +396,9 @@ class MusicPlayer {
     this.playBtn.textContent = '⏸';
     this.cover.classList.add('spinning');
     this.renderList(document.getElementById('searchInput').value);
+    if ('mediaSession' in navigator) {
+      navigator.mediaSession.playbackState = 'playing';
+    }
   }
 
   onPause() {
@@ -261,19 +406,42 @@ class MusicPlayer {
     this.playBtn.textContent = '▶';
     this.cover.classList.remove('spinning');
     this.renderList(document.getElementById('searchInput').value);
+    if ('mediaSession' in navigator) {
+      navigator.mediaSession.playbackState = 'paused';
+    }
   }
 
   onEnded() {
     if (this.playMode === 'single') {
       this.audio.currentTime = 0;
-      this.audio.play();
+      this.audio.play().catch(() => this.scheduleResume());
     } else {
       this.next();
     }
   }
 
+  scheduleResume() {
+    if (this._resumeListener) return;
+    this._resumeListener = () => {
+      if (document.visibilityState === 'visible' && !this.isPlaying) {
+        document.removeEventListener('visibilitychange', this._resumeListener);
+        this._resumeListener = null;
+        this.audio.play().catch(() => {});
+      }
+    };
+    document.addEventListener('visibilitychange', this._resumeListener);
+  }
+
   onLoaded() {
     this.durationEl.textContent = this.formatTime(this.audio.duration);
+    // 更新 Media Session duration
+    if ('mediaSession' in navigator && 'setPositionState' in navigator.mediaSession && this.audio.duration && isFinite(this.audio.duration)) {
+      navigator.mediaSession.setPositionState({
+        duration: this.audio.duration,
+        playbackRate: this.audio.playbackRate,
+        position: this.audio.currentTime || 0
+      });
+    }
     // 如果当前歌曲时长为0，回写到数据库
     if (this.currentIndex >= 0) {
       const song = this.songs[this.currentIndex];
@@ -291,16 +459,24 @@ class MusicPlayer {
 
   updateProgress() {
     const percent = (this.audio.currentTime / this.audio.duration) * 100 || 0;
-    this.progress.style.width = percent + '%';
+    if (!this._isDraggingProgress) {
+      this.progress.style.width = percent + '%';
+    }
     this.currentTimeEl.textContent = this.formatTime(this.audio.currentTime);
 
-    // 更新 Media Session position
+    // 节流：每秒只更新一次 Media Session position
+    const now = Date.now();
+    if (this._lastPosUpdate && now - this._lastPosUpdate < 1000) return;
+    this._lastPosUpdate = now;
+
     if ('mediaSession' in navigator && 'setPositionState' in navigator.mediaSession) {
-      navigator.mediaSession.setPositionState({
-        duration: this.audio.duration || 0,
-        playbackRate: this.audio.playbackRate,
-        position: this.audio.currentTime || 0
-      });
+      if (this.audio.duration && isFinite(this.audio.duration)) {
+        navigator.mediaSession.setPositionState({
+          duration: this.audio.duration,
+          playbackRate: this.audio.playbackRate,
+          position: Math.min(this.audio.currentTime || 0, this.audio.duration)
+        });
+      }
     }
   }
 
@@ -360,6 +536,12 @@ class MusicPlayer {
       const res = await fetch(`/api/songs/${id}`, { method: 'DELETE' });
       if (res.ok) {
         this.songs = this.songs.filter(s => s.id !== id);
+        this.allSongs = this.allSongs.filter(s => s.id !== id);
+        // 更新歌曲数量显示
+        const countEl = document.getElementById('songCount');
+        if (countEl) countEl.textContent = this.songs.length + ' 首';
+        const allCountEl = document.getElementById('playlistAllCount');
+        if (allCountEl) allCountEl.textContent = this.allSongs.length;
         if (this.songs.length === 0) {
           this.currentIndex = -1;
           this.audio.src = '';
@@ -367,6 +549,10 @@ class MusicPlayer {
           this.songArtist.textContent = '';
         }
         this.renderList(document.getElementById('searchInput').value);
+        // 刷新歌单列表
+        if (window.playlistManager) {
+          window.playlistManager.loadPlaylists();
+        }
       }
     } catch (err) {
       console.error('删除失败:', err);

@@ -19,6 +19,7 @@ const PORT = 3000;
 // 数据目录
 const dataDir = path.join(__dirname, 'data');
 const dbPath = path.join(dataDir, 'songs.json');
+const playlistsPath = path.join(dataDir, 'playlists.json');
 const uploadDir = path.join(dataDir, 'uploads');
 const lyricsDir = path.join(dataDir, 'lyrics');
 
@@ -46,6 +47,28 @@ function saveDB(data) {
 
 function getNextId(songs) {
   return songs.length > 0 ? Math.max(...songs.map(s => s.id)) + 1 : 1;
+}
+
+// 歌单数据库
+function loadPlaylists() {
+  if (!fs.existsSync(playlistsPath)) {
+    fs.writeFileSync(playlistsPath, '[]', 'utf8');
+    return [];
+  }
+  try {
+    return JSON.parse(fs.readFileSync(playlistsPath, 'utf8'));
+  } catch (e) {
+    fs.writeFileSync(playlistsPath, '[]', 'utf8');
+    return [];
+  }
+}
+
+function savePlaylists(data) {
+  fs.writeFileSync(playlistsPath, JSON.stringify(data, null, 2), 'utf8');
+}
+
+function getNextPlaylistId(playlists) {
+  return playlists.length > 0 ? Math.max(...playlists.map(p => p.id)) + 1 : 1;
 }
 
 // 中间件
@@ -80,6 +103,21 @@ const upload = multer({
 // API: 获取所有歌曲
 app.get('/api/songs', (req, res) => {
   const songs = loadDB();
+  const { playlist_id } = req.query;
+
+  if (playlist_id) {
+    // 返回指定歌单的歌曲
+    const playlists = loadPlaylists();
+    const playlist = playlists.find(p => p.id === parseInt(playlist_id));
+    if (!playlist) {
+      return res.status(404).json({ error: '歌单不存在' });
+    }
+    const playlistSongs = playlist.song_ids
+      .map(id => songs.find(s => s.id === id))
+      .filter(Boolean);
+    return res.json(playlistSongs);
+  }
+
   res.json(songs.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)));
 });
 
@@ -111,6 +149,7 @@ app.post('/api/upload', upload.array('music', 50), (req, res) => {
   }
 
   saveDB(songs);
+
   res.json({ success: true, songs: results });
 });
 
@@ -244,7 +283,136 @@ app.delete('/api/songs/:id', (req, res) => {
 
   songs.splice(index, 1);
   saveDB(songs);
+
+  // 从所有歌单中移除该歌曲
+  const playlists = loadPlaylists();
+  let playlistChanged = false;
+  playlists.forEach(p => {
+    const idx = p.song_ids.indexOf(id);
+    if (idx !== -1) {
+      p.song_ids.splice(idx, 1);
+      playlistChanged = true;
+    }
+  });
+  if (playlistChanged) {
+    savePlaylists(playlists);
+  }
+
   res.json({ success: true });
+});
+
+// ==================== 歌单 API ====================
+
+// API: 获取所有歌单
+app.get('/api/playlists', (req, res) => {
+  const playlists = loadPlaylists();
+  const songs = loadDB();
+  // 附加每首歌单的歌曲数量
+  const result = playlists.map(p => ({
+    ...p,
+    song_count: p.song_ids.length
+  }));
+  res.json(result);
+});
+
+// API: 创建歌单
+app.post('/api/playlists', (req, res) => {
+  const { name } = req.body;
+  if (!name || !name.trim()) {
+    return res.status(400).json({ error: '歌单名称不能为空' });
+  }
+
+  const playlists = loadPlaylists();
+  const newPlaylist = {
+    id: getNextPlaylistId(playlists),
+    name: name.trim(),
+    created_at: new Date().toISOString(),
+    song_ids: []
+  };
+  playlists.push(newPlaylist);
+  savePlaylists(playlists);
+  res.json({ success: true, playlist: { ...newPlaylist, song_count: 0 } });
+});
+
+// API: 重命名歌单
+app.put('/api/playlists/:id', (req, res) => {
+  const id = parseInt(req.params.id);
+  const { name } = req.body;
+
+  if (!name || !name.trim()) {
+    return res.status(400).json({ error: '歌单名称不能为空' });
+  }
+
+  const playlists = loadPlaylists();
+  const playlist = playlists.find(p => p.id === id);
+  if (!playlist) {
+    return res.status(404).json({ error: '歌单不存在' });
+  }
+
+  playlist.name = name.trim();
+  savePlaylists(playlists);
+  res.json({ success: true, playlist });
+});
+
+// API: 删除歌单
+app.delete('/api/playlists/:id', (req, res) => {
+  const id = parseInt(req.params.id);
+
+  const playlists = loadPlaylists();
+  const index = playlists.findIndex(p => p.id === id);
+  if (index === -1) {
+    return res.status(404).json({ error: '歌单不存在' });
+  }
+
+  playlists.splice(index, 1);
+  savePlaylists(playlists);
+  res.json({ success: true });
+});
+
+// API: 添加歌曲到歌单
+app.post('/api/playlists/:id/songs', (req, res) => {
+  const id = parseInt(req.params.id);
+  const { song_ids } = req.body;
+
+  if (!song_ids || !Array.isArray(song_ids)) {
+    return res.status(400).json({ error: '请提供歌曲ID列表' });
+  }
+
+  const playlists = loadPlaylists();
+  const playlist = playlists.find(p => p.id === id);
+  if (!playlist) {
+    return res.status(404).json({ error: '歌单不存在' });
+  }
+
+  // 添加不重复的歌曲
+  song_ids.forEach(songId => {
+    if (!playlist.song_ids.includes(songId)) {
+      playlist.song_ids.push(songId);
+    }
+  });
+
+  savePlaylists(playlists);
+  res.json({ success: true, song_count: playlist.song_ids.length });
+});
+
+// API: 从歌单移除歌曲
+app.delete('/api/playlists/:id/songs/:songId', (req, res) => {
+  const playlistId = parseInt(req.params.id);
+  const songId = parseInt(req.params.songId);
+
+  const playlists = loadPlaylists();
+  const playlist = playlists.find(p => p.id === playlistId);
+  if (!playlist) {
+    return res.status(404).json({ error: '歌单不存在' });
+  }
+
+  const index = playlist.song_ids.indexOf(songId);
+  if (index !== -1) {
+    playlist.song_ids.splice(index, 1);
+    savePlaylists(playlists);
+  }
+
+  res.json({ success: true, song_count: playlist.song_ids.length });
 });
 
 // API: 流式播放
@@ -289,13 +457,19 @@ app.get('/api/stream/:id', (req, res) => {
   }
 });
 
-// 全局错误处理 — 防止未捕获异常导致终端刷屏
+// 全局错误处理 — 记录日志但不崩溃
 process.on('uncaughtException', (err) => {
-  // 静默处理，不输出到终端
+  fs.appendFileSync(
+    path.join(dataDir, 'error.log'),
+    `[${new Date().toISOString()}] uncaughtException: ${err.stack || err.message || err}\n`
+  );
 });
 
 process.on('unhandledRejection', (reason) => {
-  // 静默处理，不输出到终端
+  fs.appendFileSync(
+    path.join(dataDir, 'error.log'),
+    `[${new Date().toISOString()}] unhandledRejection: ${reason instanceof Error ? (reason.stack || reason.message) : reason}\n`
+  );
 });
 
 // Multer 错误处理

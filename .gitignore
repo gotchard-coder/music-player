@@ -1,5 +1,6 @@
 node_modules/
 data/uploads/
 data/songs.json
+data/playlists.json
 data/lyrics/
 *.log

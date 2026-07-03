@@ -2,6 +2,7 @@
 class UploadManager {
   constructor(player) {
     this.player = player;
+    this.onUploadComplete = null; // 上传完成回调
     this.initElements();
     this.initEvents();
   }
@@ -49,6 +50,7 @@ class UploadManager {
       const duration = await this.getAudioDuration(files[i]);
       formData.append('music', files[i]);
       formData.append('duration_' + i, duration);
+      fileMap.push(files[i]);
     }
 
     this.uploadModal.classList.add('active');
@@ -92,6 +94,10 @@ class UploadManager {
             this.player.setSongs([...this.player.songs, ...result.songs]);
             if (lyricsCount > 0) {
               this.uploadStatus.textContent = `上传成功！${result.songs.length} 首，自动识别 ${lyricsCount} 首歌词`;
+            }
+            // 触发上传完成回调
+            if (this.onUploadComplete) {
+              this.onUploadComplete();
             }
           }, 500);
         } else {
