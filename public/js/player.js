@@ -185,9 +185,6 @@ class MusicPlayer {
     // 更新歌曲数量显示
     const countEl = document.getElementById('songCount');
     if (countEl) countEl.textContent = this.totalCount + ' 首';
-    // 更新歌单的全部歌曲数量
-    const allCountEl = document.getElementById('playlistAllCount');
-    if (allCountEl) allCountEl.textContent = this.totalCount;
     this.renderList();
   }
 
@@ -215,8 +212,6 @@ class MusicPlayer {
       this.totalCount = this.allSongs.length;
       const countEl = document.getElementById('songCount');
       if (countEl) countEl.textContent = this.totalCount + ' 首';
-      const allCountEl = document.getElementById('playlistAllCount');
-      if (allCountEl) allCountEl.textContent = this.totalCount;
       this.currentPage = 1;
       this.hasMore = false;
       this.renderList();
@@ -476,7 +471,7 @@ class MusicPlayer {
       this.audio.currentTime = 0;
       this.audio.play().catch(() => this.scheduleResume());
     } else {
-      this.next().catch(() => {});
+      this.next();
     }
   }
 
@@ -487,17 +482,9 @@ class MusicPlayer {
     if (playlists.length === 0) return null;
 
     const currentPlaylistId = window.playlistManager.currentPlaylistId;
-
-    // 如果当前在"全部歌曲"或没有选择歌单，返回第一个歌单
-    if (!currentPlaylistId) {
-      return playlists[0];
-    }
+    if (!currentPlaylistId) return null;
 
     const currentIndex = playlists.findIndex(p => p.id === currentPlaylistId);
-    if (currentIndex === -1) {
-      // 当前歌单不在列表中，返回第一个歌单
-      return playlists[0];
-    }
     const nextIndex = (currentIndex + 1) % playlists.length;
     return playlists[nextIndex];
   }
@@ -661,8 +648,6 @@ class MusicPlayer {
         // 更新歌曲数量显示
         const countEl = document.getElementById('songCount');
         if (countEl) countEl.textContent = this.songs.length + ' 首';
-        const allCountEl = document.getElementById('playlistAllCount');
-        if (allCountEl) allCountEl.textContent = this.allSongs.length;
         if (this.songs.length === 0) {
           this.currentIndex = -1;
           this.audio.src = '';
