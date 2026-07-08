@@ -53,6 +53,12 @@
       <div class="song-list" id="songList">
         <div class="empty-tip">暂无歌曲，点击上传</div>
       </div>
+      <!-- 分页控件 -->
+      <div class="pagination" id="pagination" style="display:none">
+        <button class="page-btn" id="pagePrev" disabled>‹</button>
+        <span class="page-info" id="pageInfo">1 / 1</span>
+        <button class="page-btn" id="pageNext" disabled>›</button>
+      </div>
     </aside>
 
     <!-- 中间：播放区域 -->
@@ -153,14 +159,7 @@
   <!-- 歌单右键菜单 -->
   <div class="context-menu" id="playlistContextMenu">
     <div class="context-menu-item" data-action="rename-playlist">重命名</div>
-    <div class="context-menu-item" data-action="delete-playlist">删除歌单</div>
-  </div>
-
-  <!-- 分页控件 -->
-  <div class="pagination" id="pagination" style="display:none">
-    <button class="page-btn" id="pagePrev" disabled>‹</button>
-    <span class="page-info" id="pageInfo">1 / 1</span>
-    <button class="page-btn" id="pageNext" disabled>›</button>
+    <div class="context-menu-item" data-action="delete-playlist">删除</div>
   </div>
 </body>
 </html>
