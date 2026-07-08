@@ -1090,7 +1090,16 @@ body {
 
   /* 移动端歌单区域 */
   .playlist-section {
-    display: none;
+    display: block;
+    flex-shrink: 0;
+    border-bottom: 1px solid var(--border);
+    padding: 12px 0;
+  }
+
+  .playlist-list {
+    max-height: 120px;
+    overflow-y: auto;
+    padding: 0 8px;
   }
 
   .search-box {
