@@ -88,7 +88,22 @@ function initDefaultPlaylists() {
 
 // 中间件
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
+
+// 强制HTML文件不缓存
+app.use((req, res, next) => {
+  if (req.url.endsWith('.html') || req.url === '/' || !req.url.includes('.')) {
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
+  }
+  next();
+});
+
+app.use(express.static(path.join(__dirname, 'public'), {
+  maxAge: 0,
+  etag: false,
+  lastModified: false
+}));
 app.use('/uploads', express.static(uploadDir));
 
 // Multer 配置
