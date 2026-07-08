@@ -9,11 +9,14 @@ class MusicPlayer {
     this.isPlaying = false;
     this.currentPage = 1;
     this.pageSize = 100;
+    this.totalCount = 0;
+    this.hasMore = false;
+    this.isLoadingMore = false;
 
     this.initElements();
     this.initEvents();
     this.initMediaSession();
-    this.initPagination();
+    this.initInfiniteScroll();
   }
 
   escapeHtml(text) {
@@ -157,38 +160,34 @@ class MusicPlayer {
     }
   }
 
-  initPagination() {
+  initInfiniteScroll() {
     this.paginationEl = document.getElementById('pagination');
-    this.pagePrevBtn = document.getElementById('pagePrev');
-    this.pageNextBtn = document.getElementById('pageNext');
-    this.pageInfoEl = document.getElementById('pageInfo');
+    // 隐藏分页控件
+    this.paginationEl.style.display = 'none';
 
-    this.pagePrevBtn.addEventListener('click', () => {
-      if (this.currentPage > 1) {
-        this.currentPage--;
-        this.renderList(document.getElementById('searchInput').value);
-      }
-    });
-
-    this.pageNextBtn.addEventListener('click', () => {
-      const totalPages = Math.ceil(this.songs.length / this.pageSize);
-      if (this.currentPage < totalPages) {
-        this.currentPage++;
-        this.renderList(document.getElementById('searchInput').value);
+    // 监听歌曲列表滚动事件，实现无限滚动
+    this.songList.addEventListener('scroll', () => {
+      if (this.isLoadingMore || !this.hasMore) return;
+      // 滚动到底部时加载更多
+      const { scrollTop, scrollHeight, clientHeight } = this.songList;
+      if (scrollTop + clientHeight >= scrollHeight - 50) {
+        this.loadMoreSongs();
       }
     });
   }
 
-  setSongs(songs) {
+  setSongs(songs, total, hasMore) {
     this.songs = songs;
     this.allSongs = songs;
+    this.totalCount = total || songs.length;
+    this.hasMore = hasMore || false;
+    this.currentPage = 1;
     // 更新歌曲数量显示
     const countEl = document.getElementById('songCount');
-    if (countEl) countEl.textContent = songs.length + ' 首';
+    if (countEl) countEl.textContent = this.totalCount + ' 首';
     // 更新歌单的全部歌曲数量
     const allCountEl = document.getElementById('playlistAllCount');
-    if (allCountEl) allCountEl.textContent = songs.length;
-    this.currentPage = 1;
+    if (allCountEl) allCountEl.textContent = this.totalCount;
     this.renderList();
   }
 
@@ -196,14 +195,24 @@ class MusicPlayer {
   async loadAllSongs() {
     try {
       const res = await fetch('/api/songs');
-      const songs = await res.json();
-      this.allSongs = songs;
-      this.songs = songs;
+      const data = await res.json();
+      // 兼容新旧API格式
+      if (data.songs) {
+        this.allSongs = data.songs;
+        this.songs = data.songs;
+        this.totalCount = data.total || data.songs.length;
+        this.hasMore = data.hasMore || false;
+      } else {
+        this.allSongs = data;
+        this.songs = data;
+        this.totalCount = data.length;
+        this.hasMore = false;
+      }
       this.currentIndex = -1;
       const countEl = document.getElementById('songCount');
-      if (countEl) countEl.textContent = songs.length + ' 首';
+      if (countEl) countEl.textContent = this.totalCount + ' 首';
       const allCountEl = document.getElementById('playlistAllCount');
-      if (allCountEl) allCountEl.textContent = songs.length;
+      if (allCountEl) allCountEl.textContent = this.totalCount;
       this.currentPage = 1;
       this.renderList();
     } catch (err) {
@@ -211,16 +220,46 @@ class MusicPlayer {
     }
   }
 
+  // 加载更多歌曲（无限滚动）
+  async loadMoreSongs() {
+    if (this.isLoadingMore || !this.hasMore) return;
+    this.isLoadingMore = true;
+    try {
+      this.currentPage++;
+      const res = await fetch(`/api/songs?page=${this.currentPage}&limit=20`);
+      const data = await res.json();
+      if (data.songs && data.songs.length > 0) {
+        this.allSongs = [...this.allSongs, ...data.songs];
+        this.songs = this.allSongs;
+        this.hasMore = data.hasMore;
+        this.renderList();
+      } else {
+        this.hasMore = false;
+      }
+    } catch (err) {
+      console.error('加载更多歌曲失败:', err);
+    } finally {
+      this.isLoadingMore = false;
+    }
+  }
+
   // 加载歌单歌曲
   async loadPlaylistSongs(playlistId) {
     try {
       const res = await fetch(`/api/songs?playlist_id=${playlistId}`);
-      const songs = await res.json();
-      this.songs = songs;
+      const data = await res.json();
+      if (data.songs) {
+        this.songs = data.songs;
+        this.totalCount = data.total || data.songs.length;
+      } else {
+        this.songs = data;
+        this.totalCount = data.length;
+      }
       this.currentIndex = -1;
       const countEl = document.getElementById('songCount');
-      if (countEl) countEl.textContent = songs.length + ' 首';
+      if (countEl) countEl.textContent = this.totalCount + ' 首';
       this.currentPage = 1;
+      this.hasMore = false;
       this.renderList();
     } catch (err) {
       console.error('加载歌单歌曲失败:', err);
@@ -248,31 +287,16 @@ class MusicPlayer {
       return;
     }
 
-    // 分页（所有设备都启用分页）
-    const totalPages = Math.ceil(filtered.length / this.pageSize);
-    if (this.currentPage > totalPages) this.currentPage = totalPages;
-    if (this.currentPage < 1) this.currentPage = 1;
+    // 显示所有已加载的歌曲，不分页
+    this.paginationEl.style.display = 'none';
 
-    const start = (this.currentPage - 1) * this.pageSize;
-    const pageItems = filtered.slice(start, start + this.pageSize);
-
-    // 更新分页控件
-    if (totalPages > 1) {
-      this.paginationEl.style.display = 'flex';
-      this.pageInfoEl.textContent = `${this.currentPage} / ${totalPages}`;
-      this.pagePrevBtn.disabled = this.currentPage <= 1;
-      this.pageNextBtn.disabled = this.currentPage >= totalPages;
-    } else {
-      this.paginationEl.style.display = 'none';
-    }
-
-    this.songList.innerHTML = pageItems.map((song, i) => {
+    let html = filtered.map((song, i) => {
       const realIndex = this.songs.findIndex(s => s.id === song.id);
       const isActive = realIndex === this.currentIndex;
       return `
         <div class="song-item ${isActive ? 'active' : ''} ${isActive && this.isPlaying ? 'playing' : ''}"
              data-index="${realIndex}">
-          <div class="song-item-index">${isActive && this.isPlaying ? '▶' : (start + i + 1)}</div>
+          <div class="song-item-index">${isActive && this.isPlaying ? '▶' : (i + 1)}</div>
           <div class="song-item-info">
             <div class="song-item-title">${this.escapeHtml(song.title)}</div>
           </div>
@@ -281,6 +305,13 @@ class MusicPlayer {
         </div>
       `;
     }).join('');
+
+    // 如果还有更多歌曲，显示加载提示
+    if (this.hasMore) {
+      html += '<div class="loading-more">滚动加载更多...</div>';
+    }
+
+    this.songList.innerHTML = html;
 
     // 绑定点击事件
     this.songList.querySelectorAll('.song-item').forEach(item => {

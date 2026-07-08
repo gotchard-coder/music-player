@@ -284,6 +284,13 @@ body {
   line-height: 1.6;
 }
 
+.loading-more {
+  text-align: center;
+  color: var(--text-muted);
+  padding: 16px;
+  font-size: 13px;
+}
+
 .song-item {
   display: flex;
   align-items: center;

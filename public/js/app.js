@@ -66,9 +66,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   // 加载歌曲列表
   async function loadSongs() {
     try {
-      const res = await fetch('/api/songs');
-      const songs = await res.json();
-      player.setSongs(songs);
+      const res = await fetch('/api/songs?page=1&limit=20');
+      const data = await res.json();
+      // 兼容新旧API格式
+      if (data.songs) {
+        player.setSongs(data.songs, data.total, data.hasMore);
+      } else {
+        player.setSongs(data);
+      }
       // 加载歌单
       await playlistManager.loadPlaylists();
     } catch (err) {

@@ -100,13 +100,13 @@ const upload = multer({
   }
 });
 
-// API: 获取所有歌曲
+// API: 获取所有歌曲（支持分页）
 app.get('/api/songs', (req, res) => {
   const songs = loadDB();
-  const { playlist_id } = req.query;
+  const { playlist_id, page, limit } = req.query;
 
   if (playlist_id) {
-    // 返回指定歌单的歌曲
+    // 返回指定歌单的歌曲（支持分页）
     const playlists = loadPlaylists();
     const playlist = playlists.find(p => p.id === parseInt(playlist_id));
     if (!playlist) {
@@ -115,10 +115,40 @@ app.get('/api/songs', (req, res) => {
     const playlistSongs = playlist.song_ids
       .map(id => songs.find(s => s.id === id))
       .filter(Boolean);
+
+    if (page && limit) {
+      const p = parseInt(page) || 1;
+      const l = parseInt(limit) || 20;
+      const start = (p - 1) * l;
+      const paged = playlistSongs.slice(start, start + l);
+      return res.json({
+        songs: paged,
+        total: playlistSongs.length,
+        page: p,
+        limit: l,
+        hasMore: start + l < playlistSongs.length
+      });
+    }
     return res.json(playlistSongs);
   }
 
-  res.json(songs.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)));
+  const sorted = songs.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+  if (page && limit) {
+    const p = parseInt(page) || 1;
+    const l = parseInt(limit) || 20;
+    const start = (p - 1) * l;
+    const paged = sorted.slice(start, start + l);
+    return res.json({
+      songs: paged,
+      total: sorted.length,
+      page: p,
+      limit: l,
+      hasMore: start + l < sorted.length
+    });
+  }
+
+  res.json(sorted);
 });
 
 // API: 上传音乐
