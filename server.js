@@ -71,6 +71,22 @@ function getNextPlaylistId(playlists) {
   return playlists.length > 0 ? Math.max(...playlists.map(p => p.id)) + 1 : 1;
 }
 
+// 初始化默认歌单
+function initDefaultPlaylists() {
+  const playlists = loadPlaylists();
+  if (playlists.length === 0) {
+    // 创建默认歌单
+    const defaultPlaylists = [
+      { id: 1, name: '我喜欢的音乐', created_at: new Date().toISOString(), song_ids: [] },
+      { id: 2, name: '歌单1', created_at: new Date().toISOString(), song_ids: [] },
+      { id: 3, name: '歌单2', created_at: new Date().toISOString(), song_ids: [] },
+      { id: 4, name: '歌单3', created_at: new Date().toISOString(), song_ids: [] },
+    ];
+    savePlaylists(defaultPlaylists);
+    console.log('已创建默认歌单');
+  }
+}
+
 // 中间件
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
@@ -179,6 +195,39 @@ app.post('/api/upload', upload.array('music', 50), (req, res) => {
   }
 
   saveDB(songs);
+
+  // 自动分配歌曲到歌单（每20首歌分配到一个歌单）
+  if (results.length > 0) {
+    const playlists = loadPlaylists();
+    // 获取所有歌单（排除"我喜欢的音乐"）
+    const availablePlaylists = playlists.filter(p => p.id !== 1);
+
+    if (availablePlaylists.length > 0) {
+      // 计算当前每个歌单的歌曲数量
+      const playlistSongCounts = availablePlaylists.map(p => ({
+        id: p.id,
+        count: p.song_ids.length
+      }));
+
+      // 找到歌曲最少的歌单
+      playlistSongCounts.sort((a, b) => a.count - b.count);
+
+      // 将新上传的歌曲分配到歌单
+      for (const song of results) {
+        // 找到歌曲最少的歌单
+        const targetPlaylist = playlistSongCounts[0];
+        const playlist = playlists.find(p => p.id === targetPlaylist.id);
+        if (playlist) {
+          playlist.song_ids.push(song.id);
+          targetPlaylist.count++; // 更新计数
+          // 重新排序，确保总是选择歌曲最少的歌单
+          playlistSongCounts.sort((a, b) => a.count - b.count);
+        }
+      }
+
+      savePlaylists(playlists);
+    }
+  }
 
   res.json({ success: true, songs: results });
 });
@@ -516,4 +565,5 @@ app.use((err, req, res, next) => {
 // 启动服务器
 app.listen(PORT, () => {
   console.log(`音乐播放器已启动: http://localhost:${PORT}`);
+  initDefaultPlaylists(); // 初始化默认歌单
 });
