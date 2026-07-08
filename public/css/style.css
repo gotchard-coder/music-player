@@ -1085,11 +1085,20 @@ body {
   /* 移动端歌单区域 */
   .playlist-section {
     flex-shrink: 0;
+    display: none;
   }
 
   .playlist-list {
-    max-height: 80px;
+    max-height: 60px;
     overflow-y: auto;
+  }
+
+  .song-list-header {
+    flex-shrink: 0;
+  }
+
+  .search-box {
+    flex-shrink: 0;
   }
 
   .song-list {
@@ -1097,6 +1106,7 @@ body {
     overflow-y: scroll;
     -webkit-overflow-scrolling: touch;
     min-height: 0;
+    height: 0;
   }
 
   /* 底部：播放控制栏 */
