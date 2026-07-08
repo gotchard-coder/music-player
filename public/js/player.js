@@ -8,7 +8,7 @@ class MusicPlayer {
     this.playMode = 'list'; // list, single, random
     this.isPlaying = false;
     this.currentPage = 1;
-    this.pageSize = 20;
+    this.pageSize = 100;
 
     this.initElements();
     this.initEvents();
