@@ -191,29 +191,34 @@ class MusicPlayer {
     this.renderList();
   }
 
-  // 加载所有歌曲
+  // 加载所有歌曲（分页加载全部）
   async loadAllSongs() {
     try {
-      const res = await fetch('/api/songs');
-      const data = await res.json();
-      // 兼容新旧API格式
-      if (data.songs) {
-        this.allSongs = data.songs;
-        this.songs = data.songs;
-        this.totalCount = data.total || data.songs.length;
-        this.hasMore = data.hasMore || false;
-      } else {
-        this.allSongs = data;
-        this.songs = data;
-        this.totalCount = data.length;
-        this.hasMore = false;
+      this.allSongs = [];
+      let page = 1;
+      let hasMore = true;
+
+      while (hasMore) {
+        const res = await fetch(`/api/songs?page=${page}&limit=50`);
+        const data = await res.json();
+        if (data.songs && data.songs.length > 0) {
+          this.allSongs = [...this.allSongs, ...data.songs];
+          hasMore = data.hasMore;
+          page++;
+        } else {
+          hasMore = false;
+        }
       }
+
+      this.songs = this.allSongs;
       this.currentIndex = -1;
+      this.totalCount = this.allSongs.length;
       const countEl = document.getElementById('songCount');
       if (countEl) countEl.textContent = this.totalCount + ' 首';
       const allCountEl = document.getElementById('playlistAllCount');
       if (allCountEl) allCountEl.textContent = this.totalCount;
       this.currentPage = 1;
+      this.hasMore = false;
       this.renderList();
     } catch (err) {
       console.error('加载歌曲失败:', err);
@@ -271,8 +276,9 @@ class MusicPlayer {
     this.songs = this.allSongs;
     this.currentIndex = -1;
     const countEl = document.getElementById('songCount');
-    if (countEl) countEl.textContent = this.songs.length + ' 首';
+    if (countEl) countEl.textContent = this.allSongs.length + ' 首';
     this.currentPage = 1;
+    this.hasMore = false;
     this.renderList();
   }
 
