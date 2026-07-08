@@ -1088,12 +1088,14 @@ body {
   }
 
   .playlist-list {
-    max-height: 100px;
+    max-height: 80px;
+    overflow-y: auto;
   }
 
   .song-list {
     flex: 1;
-    overflow-y: auto;
+    overflow-y: scroll;
+    -webkit-overflow-scrolling: touch;
     min-height: 0;
   }
 
