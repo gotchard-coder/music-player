@@ -185,6 +185,9 @@ class MusicPlayer {
     // 更新歌曲数量显示
     const countEl = document.getElementById('songCount');
     if (countEl) countEl.textContent = this.totalCount + ' 首';
+    // 更新歌单的全部歌曲数量
+    const allCountEl = document.getElementById('playlistAllCount');
+    if (allCountEl) allCountEl.textContent = this.totalCount;
     this.renderList();
   }
 
@@ -212,6 +215,8 @@ class MusicPlayer {
       this.totalCount = this.allSongs.length;
       const countEl = document.getElementById('songCount');
       if (countEl) countEl.textContent = this.totalCount + ' 首';
+      const allCountEl = document.getElementById('playlistAllCount');
+      if (allCountEl) allCountEl.textContent = this.totalCount;
       this.currentPage = 1;
       this.hasMore = false;
       this.renderList();
@@ -648,6 +653,8 @@ class MusicPlayer {
         // 更新歌曲数量显示
         const countEl = document.getElementById('songCount');
         if (countEl) countEl.textContent = this.songs.length + ' 首';
+        const allCountEl = document.getElementById('playlistAllCount');
+        if (allCountEl) allCountEl.textContent = this.allSongs.length;
         if (this.songs.length === 0) {
           this.currentIndex = -1;
           this.audio.src = '';
