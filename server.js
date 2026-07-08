@@ -77,10 +77,9 @@ function initDefaultPlaylists() {
   if (playlists.length === 0) {
     // 创建默认歌单
     const defaultPlaylists = [
-      { id: 1, name: '我喜欢的音乐', created_at: new Date().toISOString(), song_ids: [] },
-      { id: 2, name: '歌单1', created_at: new Date().toISOString(), song_ids: [] },
-      { id: 3, name: '歌单2', created_at: new Date().toISOString(), song_ids: [] },
-      { id: 4, name: '歌单3', created_at: new Date().toISOString(), song_ids: [] },
+      { id: 1, name: '歌单1', created_at: new Date().toISOString(), song_ids: [] },
+      { id: 2, name: '歌单2', created_at: new Date().toISOString(), song_ids: [] },
+      { id: 3, name: '歌单3', created_at: new Date().toISOString(), song_ids: [] },
     ];
     savePlaylists(defaultPlaylists);
     console.log('已创建默认歌单');
@@ -199,12 +198,10 @@ app.post('/api/upload', upload.array('music', 50), (req, res) => {
   // 自动分配歌曲到歌单（每20首歌分配到一个歌单）
   if (results.length > 0) {
     const playlists = loadPlaylists();
-    // 获取所有歌单（排除"我喜欢的音乐"）
-    const availablePlaylists = playlists.filter(p => p.id !== 1);
 
-    if (availablePlaylists.length > 0) {
+    if (playlists.length > 0) {
       // 计算当前每个歌单的歌曲数量
-      const playlistSongCounts = availablePlaylists.map(p => ({
+      const playlistSongCounts = playlists.map(p => ({
         id: p.id,
         count: p.song_ids.length
       }));

@@ -185,9 +185,6 @@ class MusicPlayer {
     // 更新歌曲数量显示
     const countEl = document.getElementById('songCount');
     if (countEl) countEl.textContent = this.totalCount + ' 首';
-    // 更新歌单的全部歌曲数量
-    const allCountEl = document.getElementById('playlistAllCount');
-    if (allCountEl) allCountEl.textContent = this.totalCount;
     this.renderList();
   }
 
@@ -215,8 +212,6 @@ class MusicPlayer {
       this.totalCount = this.allSongs.length;
       const countEl = document.getElementById('songCount');
       if (countEl) countEl.textContent = this.totalCount + ' 首';
-      const allCountEl = document.getElementById('playlistAllCount');
-      if (allCountEl) allCountEl.textContent = this.totalCount;
       this.currentPage = 1;
       this.hasMore = false;
       this.renderList();
@@ -417,15 +412,38 @@ class MusicPlayer {
     this.playIndex(index);
   }
 
-  next() {
+  async next() {
     if (this.songs.length === 0) return;
-    let index;
+
     if (this.playMode === 'random') {
-      index = Math.floor(Math.random() * this.songs.length);
-    } else {
-      index = (this.currentIndex + 1) % this.songs.length;
+      // 随机模式：跨歌单随机播放
+      const result = await this.getRandomSongFromAllPlaylists();
+      if (result) {
+        // 如果当前不在目标歌单，先切换
+        if (window.playlistManager.currentPlaylistId !== result.playlistId) {
+          await window.playlistManager.selectPlaylist(result.playlistId);
+        }
+        // 找到歌曲在当前列表中的索引
+        const index = this.songs.findIndex(s => s.id === result.song.id);
+        if (index >= 0) {
+          this.playIndex(index);
+        }
+        return;
+      }
     }
-    this.playIndex(index);
+
+    // 顺序播放：检查是否是当前歌单的最后一首
+    if (this.currentIndex >= this.songs.length - 1) {
+      // 当前歌单播放完，切换到下一个歌单
+      const switched = await this.switchToNextPlaylist();
+      if (!switched) {
+        // 如果无法切换，循环播放当前歌单
+        this.playIndex(0);
+      }
+    } else {
+      // 还有下一首，继续播放
+      this.playIndex(this.currentIndex + 1);
+    }
   }
 
   onPlay() {
@@ -455,6 +473,59 @@ class MusicPlayer {
     } else {
       this.next();
     }
+  }
+
+  // 获取下一个歌单
+  async getNextPlaylist() {
+    if (!window.playlistManager) return null;
+    const playlists = window.playlistManager.playlists;
+    if (playlists.length === 0) return null;
+
+    const currentPlaylistId = window.playlistManager.currentPlaylistId;
+    if (!currentPlaylistId) return null;
+
+    const currentIndex = playlists.findIndex(p => p.id === currentPlaylistId);
+    const nextIndex = (currentIndex + 1) % playlists.length;
+    return playlists[nextIndex];
+  }
+
+  // 切换到下一个歌单并播放第一首
+  async switchToNextPlaylist() {
+    const nextPlaylist = await this.getNextPlaylist();
+    if (nextPlaylist && window.playlistManager) {
+      await window.playlistManager.selectPlaylist(nextPlaylist.id);
+      // 播放第一首歌
+      if (this.songs.length > 0) {
+        this.playIndex(0);
+      }
+      return true;
+    }
+    return false;
+  }
+
+  // 随机播放时跨歌单选择歌曲
+  async getRandomSongFromAllPlaylists() {
+    if (!window.playlistManager) return null;
+    const playlists = window.playlistManager.playlists;
+    if (playlists.length === 0) return null;
+
+    // 随机选择一个歌单
+    const randomPlaylist = playlists[Math.floor(Math.random() * playlists.length)];
+
+    // 加载该歌单的歌曲
+    try {
+      const res = await fetch(`/api/songs?playlist_id=${randomPlaylist.id}`);
+      const data = await res.json();
+      const songs = data.songs || data;
+      if (songs.length > 0) {
+        // 随机选择一首歌
+        const randomSong = songs[Math.floor(Math.random() * songs.length)];
+        return { song: randomSong, playlistId: randomPlaylist.id };
+      }
+    } catch (err) {
+      console.error('获取随机歌曲失败:', err);
+    }
+    return null;
   }
 
   scheduleResume() {
@@ -577,8 +648,6 @@ class MusicPlayer {
         // 更新歌曲数量显示
         const countEl = document.getElementById('songCount');
         if (countEl) countEl.textContent = this.songs.length + ' 首';
-        const allCountEl = document.getElementById('playlistAllCount');
-        if (allCountEl) allCountEl.textContent = this.allSongs.length;
         if (this.songs.length === 0) {
           this.currentIndex = -1;
           this.audio.src = '';

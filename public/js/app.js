@@ -66,14 +66,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   // 加载歌曲列表
   async function loadSongs() {
     try {
-      const res = await fetch('/api/songs?page=1&limit=20');
-      const data = await res.json();
-      // 兼容新旧API格式
-      if (data.songs) {
-        player.setSongs(data.songs, data.total, data.hasMore);
-      } else {
-        player.setSongs(data);
-      }
       // 加载歌单
       await playlistManager.loadPlaylists();
     } catch (err) {
@@ -179,8 +171,22 @@ document.addEventListener('DOMContentLoaded', async () => {
   uploader.onUploadComplete = async () => {
     await player.loadAllSongs();
     await playlistManager.loadPlaylists();
+    // 自动选择第一个歌单
+    if (playlistManager.playlists.length > 0) {
+      const firstPlaylist = playlistManager.playlists.find(p => p.id !== 1);
+      if (firstPlaylist) {
+        await playlistManager.selectPlaylist(firstPlaylist.id);
+      }
+    }
   };
 
   // 初始化
   await loadSongs();
+  // 自动选择第一个歌单
+  if (playlistManager.playlists.length > 0) {
+    const firstPlaylist = playlistManager.playlists.find(p => p.id !== 1);
+    if (firstPlaylist) {
+      await playlistManager.selectPlaylist(firstPlaylist.id);
+    }
+  }
 });

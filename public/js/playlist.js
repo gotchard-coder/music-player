@@ -33,11 +33,6 @@ class PlaylistManager {
         this.hideNameInput();
       }
     });
-
-    // 全部歌曲点击
-    document.getElementById('playlistAll').addEventListener('click', () => {
-      this.selectPlaylist(null);
-    });
   }
 
   showNameInput() {
@@ -66,21 +61,27 @@ class PlaylistManager {
 
   // 渲染歌单列表
   renderPlaylistList() {
-    // 更新全部歌曲数量
-    document.getElementById('playlistAllCount').textContent = this.player.allSongs.length;
+    // 渲染用户歌单（排除"我喜欢的音乐"）
+    const userPlaylists = this.playlists.filter(p => p.id !== 1 && p.id !== null);
 
-    // 渲染用户歌单
-    const userPlaylists = this.playlists.filter(p => p.id !== 1);
-    // 默认歌单排前面
-    const defaultPlaylist = this.playlists.find(p => p.id === 1);
-    const sortedPlaylists = defaultPlaylist ? [defaultPlaylist, ...userPlaylists] : userPlaylists;
-
-    // 保留全部歌曲的 HTML，只更新歌单项
+    // 更新容器
     const container = this.playlistList;
-    // 移除旧的歌单项（保留 playlistAll）
-    container.querySelectorAll('.playlist-item:not(#playlistAll)').forEach(el => el.remove());
+    // 清空容器
+    container.innerHTML = '';
 
-    sortedPlaylists.forEach(playlist => {
+    // 如果没有歌单，显示提示
+    if (userPlaylists.length === 0) {
+      const emptyItem = document.createElement('div');
+      emptyItem.className = 'playlist-item';
+      emptyItem.innerHTML = '<span class="playlist-item-name" style="color: var(--text-muted)">暂无歌单，点击 + 创建</span>';
+      container.appendChild(emptyItem);
+      if (this.playlistCount) {
+        this.playlistCount.textContent = '0';
+      }
+      return;
+    }
+
+    userPlaylists.forEach(playlist => {
       const item = document.createElement('div');
       item.className = 'playlist-item' + (this.currentPlaylistId === playlist.id ? ' active' : '');
       item.dataset.id = playlist.id;
@@ -101,7 +102,7 @@ class PlaylistManager {
 
     // 更新总数
     if (this.playlistCount) {
-      this.playlistCount.textContent = this.playlists.length;
+      this.playlistCount.textContent = userPlaylists.length;
     }
   }
 
@@ -164,19 +165,11 @@ class PlaylistManager {
 
     // 更新标题
     const titleEl = document.getElementById('songListTitle');
-    if (id === null) {
-      titleEl.textContent = '全部歌曲';
-    } else {
-      const playlist = this.playlists.find(p => p.id === id);
-      titleEl.textContent = playlist ? playlist.name : '全部歌曲';
-    }
+    const playlist = this.playlists.find(p => p.id === id);
+    titleEl.textContent = playlist ? playlist.name : '全部歌曲';
 
     // 加载歌曲
-    if (id === null) {
-      this.player.renderFromAllSongs();
-    } else {
-      await this.player.loadPlaylistSongs(id);
-    }
+    await this.player.loadPlaylistSongs(id);
   }
 
   // 添加歌曲到歌单
