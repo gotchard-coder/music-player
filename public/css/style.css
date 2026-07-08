@@ -1073,7 +1073,6 @@ body {
     z-index: 200;
     transform: translateX(-100%);
     transition: transform 0.3s ease;
-    overflow: hidden;
   }
 
   .sidebar.open {
@@ -1094,13 +1093,8 @@ body {
   }
 
   .song-list {
-    position: absolute;
-    top: 120px;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    overflow-y: scroll;
-    -webkit-overflow-scrolling: touch;
+    height: 500px;
+    overflow-y: auto;
   }
 
   /* 底部：播放控制栏 */
