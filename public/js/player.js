@@ -248,22 +248,32 @@ class MusicPlayer {
       return;
     }
 
-    // 分页
-    const totalPages = Math.ceil(filtered.length / this.pageSize);
-    if (this.currentPage > totalPages) this.currentPage = totalPages;
-    if (this.currentPage < 1) this.currentPage = 1;
+    // 移动端不分页，直接显示所有歌曲
+    const isMobile = window.innerWidth <= 768;
+    let pageItems, start;
 
-    const start = (this.currentPage - 1) * this.pageSize;
-    const pageItems = filtered.slice(start, start + this.pageSize);
-
-    // 更新分页控件
-    if (totalPages > 1) {
-      this.paginationEl.style.display = 'flex';
-      this.pageInfoEl.textContent = `${this.currentPage} / ${totalPages}`;
-      this.pagePrevBtn.disabled = this.currentPage <= 1;
-      this.pageNextBtn.disabled = this.currentPage >= totalPages;
-    } else {
+    if (isMobile) {
+      pageItems = filtered;
+      start = 0;
       this.paginationEl.style.display = 'none';
+    } else {
+      // 分页
+      const totalPages = Math.ceil(filtered.length / this.pageSize);
+      if (this.currentPage > totalPages) this.currentPage = totalPages;
+      if (this.currentPage < 1) this.currentPage = 1;
+
+      start = (this.currentPage - 1) * this.pageSize;
+      pageItems = filtered.slice(start, start + this.pageSize);
+
+      // 更新分页控件
+      if (totalPages > 1) {
+        this.paginationEl.style.display = 'flex';
+        this.pageInfoEl.textContent = `${this.currentPage} / ${totalPages}`;
+        this.pagePrevBtn.disabled = this.currentPage <= 1;
+        this.pageNextBtn.disabled = this.currentPage >= totalPages;
+      } else {
+        this.paginationEl.style.display = 'none';
+      }
     }
 
     this.songList.innerHTML = pageItems.map((song, i) => {
