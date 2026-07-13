@@ -1,164 +1,210 @@
-<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-  <meta http-equiv="Pragma" content="no-cache">
-  <meta http-equiv="Expires" content="0">
-  <meta name="theme-color" content="#1a1a2e">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <title>音乐播放器</title>
-  <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="css/style.css?v=7">
-</head>
-<body>
-  <div class="app">
-    <!-- 遮罩层 -->
+<!DOCTYPE html>  <!-- 声明这是一个 HTML5 文档 -->
+<html lang="zh-CN">  <!-- 根元素，语言设为简体中文 -->
+<head>  <!-- 头部：存放页面的配置信息，不会显示在页面上 -->
+  <meta charset="UTF-8">  <!-- 字符编码用 UTF-8，支持中文显示 -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">  <!-- 让页面在手机上自适应宽度 -->
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">  <!-- 禁止浏览器缓存页面 -->
+  <meta http-equiv="Pragma" content="no-cache">  <!-- 兼容旧浏览器的缓存控制 -->
+  <meta http-equiv="Expires" content="0">  <!-- 让页面立即过期，不缓存 -->
+  <meta name="theme-color" content="#1a1a2e">  <!-- 手机浏览器顶部栏颜色（深蓝色），Android 通用 -->
+  <meta name="mobile-web-app-capable" content="yes">  <!-- 允许 Android 把网页添加到桌面（通用标准） -->
+  <title>music-播放器</title>  <!-- 浏览器标签页显示的标题 -->
+  <link rel="manifest" href="manifest.json">  <!-- 引入 PWA 配置文件（让网页能像 App 一样安装） -->
+  <link rel="stylesheet" href="css/style.css?v=7">  <!-- 引入样式文件，?v=7 是版本号，用于清除缓存 -->
+</head>  <!-- head 结束 -->
+<body>  <!-- 身体：存放页面所有可见的内容 -->
+
+  <!-- ========== 整体容器 ========== -->
+  <div class="app">  <!-- 整个应用的最外层容器 -->
+
+    <!-- 手机端遮罩层：点击后关闭侧边栏 -->
     <div class="mobile-overlay" id="mobileOverlay"></div>
 
-    <!-- 左侧：歌曲列表 -->
-    <aside class="sidebar" id="sidebar">
+    <!-- ========== 左侧边栏：歌曲列表和歌单管理 ========== -->
+    <aside class="sidebar" id="sidebar">  <!-- aside 表示侧边栏 -->
+
+      <!-- 侧边栏头部：标题和按钮 -->
       <div class="sidebar-header">
         <div>
-          <h2>我的音乐</h2>
-          <span class="song-count" id="songCount">0 首</span>
+          <h2>我的音乐</h2>  <!-- 显示标题 -->
+          <span class="song-count" id="songCount">0 首</span>  <!-- 显示歌曲数量，JS 会动态更新 -->
         </div>
         <div class="sidebar-header-right">
-          <button id="uploadBtn" class="btn-upload">+ 上传</button>
-          <button class="btn-close-sidebar" id="closeSidebar">✕</button>
+          <button id="uploadBtn" class="btn-upload">+ 上传</button>  <!-- 上传按钮，点击后选择音乐文件 -->
+          <button class="btn-close-sidebar" id="closeSidebar">✕</button>  <!-- 关闭侧边栏按钮（手机端用） -->
         </div>
       </div>
 
-      <!-- 歌单区域 -->
+      <!-- ========== 歌单区域：管理用户的歌单 ========== -->
       <div class="playlist-section">
+        <!-- 歌单头部：歌单标题和新建按钮 -->
         <div class="playlist-header">
-          <span class="playlist-title">我的歌单</span>
-          <span class="playlist-count" id="playlistCount">0</span>
-          <button class="btn-add-playlist" id="playlistAddBtn" title="新建歌单">+</button>
+          <span class="playlist-title">我的歌单</span>  <!-- 显示"我的歌单"标题 -->
+          <span class="playlist-count" id="playlistCount">0</span>  <!-- 显示歌单数量 -->
+          <button class="btn-add-playlist" id="playlistAddBtn" title="新建歌单">+</button>  <!-- 点击后新建歌单 -->
+          <!-- 新建歌单的输入框，默认隐藏，点击"+"后才会显示 -->
           <input type="text" class="playlist-name-input" id="playlistNameInput" placeholder="输入歌单名称" style="display:none">
         </div>
+        <!-- 歌单列表容器：JS 会动态添加歌单项 -->
         <div class="playlist-list" id="playlistList">
+          <!-- 歌单项会通过 JavaScript 动态插入这里 -->
         </div>
       </div>
 
+      <!-- ========== 搜索框：搜索歌曲 ========== -->
       <div class="search-box">
-        <input type="text" id="searchInput" placeholder="搜索歌曲...">
+        <input type="text" id="searchInput" placeholder="搜索歌曲...">  <!-- 搜索输入框，输入关键词过滤歌曲 -->
       </div>
-      <div class="song-list-header">
-        <span class="song-list-title" id="songListTitle">全部歌曲</span>
-      </div>
-      <div class="song-list" id="songList">
-        <div class="empty-tip">暂无歌曲，点击上传</div>
-      </div>
-      <!-- 分页控件 -->
-      <div class="pagination" id="pagination" style="display:none">
-        <button class="page-btn" id="pagePrev" disabled>‹</button>
-        <span class="page-info" id="pageInfo">1 / 1</span>
-        <button class="page-btn" id="pageNext" disabled>›</button>
-      </div>
-    </aside>
 
-    <!-- 中间：播放区域 -->
-    <main class="main">
-      <!-- 手机端菜单按钮 -->
+      <!-- 歌曲列表头部：显示当前列表标题 -->
+      <div class="song-list-header">
+        <span class="song-list-title" id="songListTitle">全部歌曲</span>  <!-- 显示"全部歌曲"或某个歌单名称 -->
+      </div>
+
+      <!-- ========== 歌曲列表：显示所有歌曲 ========== -->
+      <div class="song-list" id="songList">
+        <div class="empty-tip">暂无歌曲，点击上传</div>  <!-- 当没有歌曲时显示的提示 -->
+        <!-- 歌曲项会通过 JavaScript 动态插入这里 -->
+      </div>
+
+      <!-- ========== 分页控件：歌曲太多时分页显示 ========== -->
+      <div class="pagination" id="pagination" style="display:none">  <!-- 默认隐藏，歌曲超过一定数量时显示 -->
+        <button class="page-btn" id="pagePrev" disabled>‹</button>  <!-- 上一页按钮，禁用状态 -->
+        <span class="page-info" id="pageInfo">1 / 1</span>  <!-- 显示当前页码，如"1 / 5" -->
+        <button class="page-btn" id="pageNext" disabled>›</button>  <!-- 下一页按钮，禁用状态 -->
+      </div>
+    </aside>  <!-- 侧边栏结束 -->
+
+    <!-- ========== 中间主区域：播放显示和歌词 ========== -->
+    <main class="main">  <!-- main 表示主要内容区域 -->
+
+      <!-- 手机端菜单按钮：点击后显示左侧边栏 -->
       <button class="btn-menu-mobile" id="menuBtn">☰</button>
 
+      <!-- ========== 播放器显示区：封面、歌曲名、歌手 ========== -->
       <div class="player-display" id="playerDisplay">
+        <!-- 封面图片区域 -->
         <div class="cover-wrapper">
-          <div class="cover" id="cover">
-            <div class="cover-default">♪</div>
+          <div class="cover" id="cover">  <!-- 封面容器 -->
+            <div class="cover-default">♪</div>  <!-- 默认封面图标（没有封面时显示） -->
           </div>
         </div>
+        <!-- 歌曲信息区域 -->
         <div class="song-info">
-          <div class="song-title" id="songTitle">未选择歌曲</div>
-          <div class="song-artist" id="songArtist"></div>
+          <div class="song-title" id="songTitle">未选择歌曲</div>  <!-- 歌曲标题，默认"未选择歌曲" -->
+          <div class="song-artist" id="songArtist"></div>  <!-- 歌手名称 -->
         </div>
       </div>
 
-      <!-- 歌词面板 -->
+      <!-- ========== 歌词面板：显示和管理歌词 ========== -->
       <div class="lyrics-panel" id="lyricsPanel">
+        <!-- 歌词头部：标题和导入按钮 -->
         <div class="lyrics-header">
           <span class="lyrics-title">歌词</span>
+          <!-- 导入歌词按钮（点击后选择 LRC 歌词文件） -->
           <label class="lyrics-upload-btn" id="lyricsUploadBtn" title="上传LRC歌词文件">
+            <!-- 隐藏的文件选择框，只允许选择 .lrc 或 .txt 文件 -->
             <input type="file" id="lyricsInput" accept=".lrc,.txt" style="display:none">
             + 导入歌词
           </label>
         </div>
+        <!-- 歌词内容区域：显示歌词文本 -->
         <div class="lyrics-content" id="lyricsContent">
-          <div class="lyrics-empty">暂无歌词</div>
+          <div class="lyrics-empty">暂无歌词</div>  <!-- 没有歌词时显示的提示 -->
+          <!-- 歌词行会通过 JavaScript 动态插入这里 -->
         </div>
       </div>
-    </main>
-  </div>
+    </main>  <!-- 主区域结束 -->
+  </div>  <!-- 整体容器结束 -->
 
-  <!-- 底部：播放控制栏 -->
-  <footer class="player-bar">
+  <!-- ========== 底部播放控制栏 ========== -->
+  <footer class="player-bar">  <!-- footer 表示底部区域 -->
+
+    <!-- 进度条：点击可跳转播放位置 -->
     <div class="progress-bar" id="progressBar">
+      <!-- 进度条填充部分，JS 会动态设置它的宽度百分比 -->
       <div class="progress" id="progress"></div>
     </div>
+
+    <!-- 控制按钮区域 -->
     <div class="controls">
+      <!-- 左侧：时间显示 -->
       <div class="controls-left">
-        <span class="time" id="currentTime">00:00</span>
-        <span class="time-sep">/</span>
-        <span class="time" id="duration">00:00</span>
+        <span class="time" id="currentTime">00:00</span>  <!-- 当前播放时间 -->
+        <span class="time-sep">/</span>  <!-- 分隔符 -->
+        <span class="time" id="duration">00:00</span>  <!-- 歌曲总时长 -->
       </div>
+
+      <!-- 中间：播放控制按钮 -->
       <div class="controls-center">
-        <button class="btn-ctrl" id="shuffleBtn" title="随机播放">⤮</button>
-        <button class="btn-ctrl" id="prevBtn" title="上一曲">⏮</button>
-        <button class="btn-ctrl btn-play" id="playBtn" title="播放">▶</button>
-        <button class="btn-ctrl" id="nextBtn" title="下一曲">⏭</button>
-        <button class="btn-ctrl" id="repeatBtn" title="列表循环">↻</button>
-        <button class="btn-ctrl" id="lyricsBtn" title="歌词">词</button>
+        <button class="btn-ctrl" id="shuffleBtn" title="随机播放">⤮</button>  <!-- 随机播放开关 -->
+        <button class="btn-ctrl" id="prevBtn" title="上一曲">⏮</button>  <!-- 上一曲按钮 -->
+        <button class="btn-ctrl btn-play" id="playBtn" title="播放">▶</button>  <!-- 播放/暂停按钮 -->
+        <button class="btn-ctrl" id="nextBtn" title="下一曲">⏭</button>  <!-- 下一曲按钮 -->
+        <button class="btn-ctrl" id="repeatBtn" title="列表循环">↻</button>  <!-- 循环模式按钮 -->
+        <button class="btn-ctrl" id="lyricsBtn" title="歌词">词</button>  <!-- 显示/隐藏歌词按钮 -->
       </div>
+
+      <!-- 右侧：音量控制 -->
       <div class="controls-right">
-        <button class="btn-ctrl" id="volumeBtn" title="音量">🔊</button>
+        <button class="btn-ctrl" id="volumeBtn" title="音量">🔊</button>  <!-- 静音/取消静音按钮 -->
         <div class="volume-slider">
+          <!-- 音量滑块：范围 0-100，默认 80 -->
           <input type="range" id="volumeSlider" min="0" max="100" value="80">
         </div>
-        <span class="volume-value" id="volumeValue">80</span>
+        <span class="volume-value" id="volumeValue">80</span>  <!-- 显示当前音量数值 -->
       </div>
     </div>
-  </footer>
+  </footer>  <!-- 底部控制栏结束 -->
 
-  <!-- 隐藏的文件输入 -->
+  <!-- ========== 隐藏元素 ========== -->
+
+  <!-- 隐藏的文件选择框：点击"上传"按钮时 JS 会触发它 -->
+  <!-- accept="audio/*" 表示只允许选择音频文件 -->
+  <!-- multiple 表示允许多选 -->
   <input type="file" id="fileInput" accept="audio/*" multiple style="display:none">
 
-  <!-- 上传进度弹窗 -->
+  <!-- ========== 上传进度弹窗 ========== -->
+  <!-- 上传文件时显示的弹窗，默认隐藏，JS 会控制显示/隐藏 -->
   <div class="upload-modal" id="uploadModal">
     <div class="upload-modal-content">
-      <h3>上传中...</h3>
+      <h3>上传中...</h3>  <!-- 弹窗标题 -->
+      <!-- 进度条 -->
       <div class="upload-progress-bar">
-        <div class="upload-progress" id="uploadProgress"></div>
+        <div class="upload-progress" id="uploadProgress"></div>  <!-- 进度条填充部分 -->
       </div>
-      <p id="uploadStatus">准备上传</p>
+      <p id="uploadStatus">准备上传</p>  <!-- 显示上传状态，如"正在上传 3/5" -->
     </div>
   </div>
 
-  <script src="js/player.js?v=7"></script>
-  <script src="js/upload.js"></script>
-  <script src="js/lyrics-extract.js"></script>
-  <script src="js/lyrics.js"></script>
-  <script src="js/playlist.js?v=7"></script>
-  <script src="js/app.js?v=7"></script>
+  <!-- ========== JavaScript 文件加载 ========== -->
+  <!-- 注意：加载顺序很重要！先加载功能模块，最后加载主入口 -->
+  <script src="js/player.js?v=7"></script>   <!-- 播放器核心：播放、暂停、上下曲、进度条 -->
+  <script src="js/upload.js"></script>        <!-- 上传功能：文件上传、进度显示 -->
+  <script src="js/lyrics-extract.js"></script> <!-- 歌词提取：从音频文件提取内嵌歌词 -->
+  <script src="js/lyrics.js"></script>        <!-- 歌词显示：解析 LRC 格式、同步滚动 -->
+  <script src="js/playlist.js?v=7"></script>  <!-- 歌单管理：创建、删除、添加歌曲 -->
+  <script src="js/app.js?v=7"></script>       <!-- 主入口：初始化应用、绑定事件（必须最后加载） -->
 
-  <!-- 右键菜单 -->
+  <!-- ========== 右键菜单（默认隐藏） ========== -->
+
+  <!-- 歌曲右键菜单：右键点击歌曲时弹出 -->
   <div class="context-menu" id="contextMenu">
-    <div class="context-menu-item" data-action="rename">重命名</div>
-    <div class="context-menu-item" data-action="add-to-playlist">添加到歌单</div>
-    <div class="context-menu-item" data-action="delete">删除</div>
+    <div class="context-menu-item" data-action="rename">重命名</div>  <!-- 重命名歌曲 -->
+    <div class="context-menu-item" data-action="add-to-playlist">添加到歌单</div>  <!-- 添加到歌单（有子菜单） -->
+    <div class="context-menu-item" data-action="delete">删除</div>  <!-- 删除歌曲 -->
   </div>
 
-  <!-- 添加到歌单子菜单 -->
+  <!-- 添加到歌单的子菜单：鼠标悬停在"添加到歌单"时弹出 -->
   <div class="context-menu submenu" id="addToPlaylistMenu">
-    <div class="context-menu-subtitle">选择歌单</div>
+    <div class="context-menu-subtitle">选择歌单</div>  <!-- 标题 -->
+    <!-- 歌单列表会通过 JavaScript 动态插入这里 -->
   </div>
 
-  <!-- 歌单右键菜单 -->
+  <!-- 歌单右键菜单：右键点击歌单时弹出 -->
   <div class="context-menu" id="playlistContextMenu">
-    <div class="context-menu-item" data-action="rename-playlist">重命名</div>
-    <div class="context-menu-item" data-action="delete-playlist">删除</div>
+    <div class="context-menu-item" data-action="rename-playlist">重命名</div>  <!-- 重命名歌单 -->
+    <div class="context-menu-item" action="delete-playlist">删除</div>  <!-- 删除歌单 -->
   </div>
-</body>
-</html>
+</body>  <!-- body 结束 -->
+</html>  <!-- HTML 文档结束 -->
