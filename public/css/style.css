@@ -1,61 +1,105 @@
+/* =====================================================================
+   文件：style.css
+   职责：音乐播放器的样式文件，控制所有界面的外观
+   这个文件定义了颜色、字体、布局、动画等视觉效果
+   ===================================================================== */
+
+/*
+   目录：
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+   【电脑端样式】（默认样式，屏幕 > 768px 时生效）
+   ├── 1.  全局样式（CSS变量、body、重置样式）
+   ├── 2.  侧边栏样式（标题、上传按钮、搜索框）
+   ├── 3.  歌单区域样式（歌单列表、新建歌单）
+   ├── 4.  歌曲列表样式（歌曲项、播放状态、滚动条）
+   ├── 5.  右键菜单样式（歌曲菜单、歌单菜单）
+   ├── 6.  分页控件样式（上一页/下一页）
+   ├── 7.  主区域样式（封面、歌曲信息、旋转动画）
+   ├── 8.  底部播放栏样式（进度条、控制按钮、音量）
+   ├── 9.  上传弹窗样式（进度条、状态文字）
+   ├── 10. 歌词面板样式（歌词行、高亮、滚动）
+   └── 11. 手机端遮罩和菜单按钮（默认隐藏，手机端显示）
+
+   【手机端样式】（屏幕 ≤ 768px 时覆盖电脑端样式）
+   └── 12. 响应式布局（手机端适配）
+
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+*/
+
+/* #region 1. 全局样式 */
+/* ==================== 1. 全局样式 ==================== */
+
+/* 1.1 重置所有元素的默认样式 */
 * {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+  margin: 0;        /* 清除外边距 */
+  padding: 0;       /* 清除内边距 */
+  box-sizing: border-box; /* 宽度包含padding和border */
 }
 
+/* 1.2 CSS变量：定义主题颜色，方便全局修改 */
 :root {
-  --bg-dark: #0a0a0a;
-  --bg-card: #141414;
-  --bg-hover: #1f1f1f;
-  --bg-active: #282828;
-  --primary: #1db954;
-  --primary-hover: #1ed760;
-  --primary-glow: rgba(29, 185, 84, 0.3);
-  --text: #ffffff;
-  --text-dim: #a0a0a0;
-  --text-muted: #5a5a5a;
-  --border: #1f1f1f;
-  --shadow: 0 8px 24px rgba(0,0,0,0.5);
+  --bg-dark: #0a0a0a;           /* 页面背景色（深黑色） */
+  --bg-card: #141414;           /* 卡片背景色（侧边栏、底部栏） */
+  --bg-hover: #1f1f1f;          /* 鼠标悬停时的背景色 */
+  --bg-active: #282828;         /* 选中状态的背景色 */
+  --primary: #1db954;           /* 主题色（绿色，类似Spotify） */
+  --primary-hover: #1ed760;     /* 主题色悬停状态 */
+  --primary-glow: rgba(29, 185, 84, 0.3); /* 主题色发光效果 */
+  --text: #ffffff;               /* 主要文字颜色（白色） */
+  --text-dim: #a0a0a0;          /* 次要文字颜色（灰色） */
+  --text-muted: #5a5a5a;        /* 更淡的文字颜色 */
+  --border: #1f1f1f;            /* 边框颜色 */
+  --shadow: 0 8px 24px rgba(0,0,0,0.5); /* 阴影效果 */
 }
 
+/* 1.3 页面整体样式 */
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
-  background: var(--bg-dark);
-  color: var(--text);
-  height: 100vh;
-  overflow: hidden;
+  background: var(--bg-dark);   /* 深黑色背景 */
+  color: var(--text);           /* 白色文字 */
+  height: 100vh;                /* 高度占满整个屏幕 */
+  overflow: hidden;             /* 隐藏滚动条（整体页面不滚动） */
 }
 
+/* 1.4 整体应用容器：左右分栏布局 */
 .app {
-  display: flex;
-  height: calc(100vh - 96px);
+  display: flex;                /* 使用Flexbox布局 */
+  height: calc(100vh - 96px);   /* 高度 = 屏幕高度 - 底部播放栏高度(96px) */
 }
 
-/* ========== 侧边栏 ========== */
+/* #endregion */
+/* #endregion */
+/* #region 2. 侧边栏样式 */
+/* ==================== 2. 侧边栏样式 ==================== */
+
+/* 2.1 侧边栏容器 */
 .sidebar {
-  width: 320px;
-  background: var(--bg-card);
-  border-right: 1px solid var(--border);
-  display: flex;
-  flex-direction: column;
+  width: 320px;                 /* 固定宽度320px */
+  background: var(--bg-card);   /* 深色背景 */
+  border-right: 1px solid var(--border); /* 右边框 */
+  display: flex;                /* 内部使用Flexbox */
+  flex-direction: column;       /* 垂直排列 */
 }
 
+/* 2.2 侧边栏头部：标题 + 上传按钮 */
 .sidebar-header {
-  padding: 24px 20px 16px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+  padding: 24px 20px 16px;      /* 内边距 */
+  display: flex;                /* 水平排列 */
+  justify-content: space-between; /* 两端对齐 */
+  align-items: center;          /* 垂直居中 */
 }
 
+/* 2.3 侧边栏头部右侧：按钮组 */
 .sidebar-header-right {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 8px;                     /* 按钮之间的间距 */
 }
 
+/* 2.4 关闭侧边栏按钮（手机端用，电脑端隐藏） */
 .btn-close-sidebar {
-  display: none;
+  display: none;                /* 默认隐藏 */
   background: none;
   border: none;
   color: var(--text-dim);
@@ -64,47 +108,57 @@ body {
   padding: 4px 8px;
 }
 
+/* 2.5 侧边栏标题 "我的音乐" */
 .sidebar-header h2 {
   font-size: 20px;
-  font-weight: 700;
-  letter-spacing: -0.5px;
+  font-weight: 700;             /* 粗体 */
+  letter-spacing: -0.5px;       /* 字间距 */
 }
 
+/* 2.6 歌曲数量显示 */
 .song-count {
   font-size: 12px;
   color: var(--text-muted);
 }
 
+/* 2.7 上传按钮（绿色圆角按钮） */
 .btn-upload {
-  background: var(--primary);
-  color: #fff;
+  background: var(--primary);   /* 绿色背景 */
+  color: #fff;                  /* 白色文字 */
   border: none;
   padding: 8px 20px;
-  border-radius: 50px;
+  border-radius: 50px;          /* 圆角 */
   cursor: pointer;
   font-size: 13px;
   font-weight: 600;
   letter-spacing: 0.3px;
-  transition: all 0.2s;
-  box-shadow: 0 2px 8px rgba(29, 185, 84, 0.3);
+  transition: all 0.2s;         /* 过渡动画 */
+  box-shadow: 0 2px 8px rgba(29, 185, 84, 0.3); /* 绿色阴影 */
 }
 
+/* 2.8 上传按钮悬停效果 */
 .btn-upload:hover {
-  background: var(--primary-hover);
-  transform: translateY(-1px);
+  background: var(--primary-hover); /* 颜色变亮 */
+  transform: translateY(-1px);      /* 向上移动1px */
   box-shadow: 0 4px 12px rgba(29, 185, 84, 0.4);
 }
 
+/* 2.9 上传按钮点击效果 */
 .btn-upload:active {
-  transform: translateY(0);
+  transform: translateY(0);     /* 回到原位 */
 }
 
-/* ========== 歌单区域 ========== */
+/* #endregion */
+/* #region 3. 歌单区域样式 */
+/* ==================== 3. 歌单区域样式 ==================== */
+
+/* 3.1 歌单区域容器 */
 .playlist-section {
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--border); /* 底部边框 */
   padding: 12px 0;
 }
 
+/* 3.2 歌单头部：标题 + 新建按钮 */
 .playlist-header {
   display: flex;
   align-items: center;
@@ -112,24 +166,27 @@ body {
   gap: 6px;
 }
 
+/* 3.3 "我的歌单"标题 */
 .playlist-title {
   font-size: 12px;
   font-weight: 600;
   color: var(--text-muted);
-  text-transform: uppercase;
+  text-transform: uppercase;    /* 大写字母 */
   letter-spacing: 0.5px;
 }
 
+/* 3.4 歌单数量徽章 */
 .playlist-count {
   font-size: 11px;
   color: var(--text-muted);
   background: var(--bg-hover);
   padding: 2px 6px;
-  border-radius: 10px;
+  border-radius: 10px;         /* 圆角 */
 }
 
+/* 3.5 新建歌单按钮（+号） */
 .btn-add-playlist {
-  margin-left: auto;
+  margin-left: auto;           /* 靠右对齐 */
   background: none;
   border: 1px solid var(--border);
   color: var(--text-dim);
@@ -144,12 +201,14 @@ body {
   transition: all 0.15s;
 }
 
+/* 3.6 新建歌单按钮悬停效果 */
 .btn-add-playlist:hover {
-  border-color: var(--primary);
-  color: var(--primary);
-  background: rgba(29, 185, 84, 0.1);
+  border-color: var(--primary); /* 边框变绿 */
+  color: var(--primary);        /* 文字变绿 */
+  background: rgba(29, 185, 84, 0.1); /* 浅绿背景 */
 }
 
+/* 3.7 歌单名称输入框（新建歌单时显示） */
 .playlist-name-input {
   flex: 1;
   background: var(--bg-hover);
@@ -162,14 +221,16 @@ body {
   max-width: 120px;
 }
 
+/* 3.8 歌单列表容器（可滚动） */
 .playlist-list {
-  max-height: 160px;
-  overflow-y: auto;
+  max-height: 160px;            /* 最大高度 */
+  overflow-y: auto;             /* 超出时显示滚动条 */
   padding: 0 8px;
 }
 
+/* 3.9 歌单列表滚动条样式 */
 .playlist-list::-webkit-scrollbar {
-  width: 4px;
+  width: 4px;                   /* 滚动条宽度 */
 }
 
 .playlist-list::-webkit-scrollbar-thumb {
@@ -177,6 +238,7 @@ body {
   border-radius: 2px;
 }
 
+/* 3.10 歌单项（每个歌单） */
 .playlist-item {
   display: flex;
   align-items: center;
@@ -191,22 +253,25 @@ body {
   background: var(--bg-hover);
 }
 
+/* 3.11 选中的歌单项 */
 .playlist-item.active {
   background: var(--bg-active);
 }
 
 .playlist-item.active .playlist-item-name {
-  color: var(--primary);
+  color: var(--primary);        /* 选中时文字变绿 */
 }
 
+/* 3.12 歌单名称 */
 .playlist-item-name {
-  flex: 1;
+  flex: 1;                      /* 占据剩余空间 */
   font-size: 13px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: nowrap;          /* 不换行 */
+  overflow: hidden;             /* 超出部分隐藏 */
+  text-overflow: ellipsis;      /* 显示省略号 */
 }
 
+/* 3.13 歌单歌曲数量 */
 .playlist-item-count {
   font-size: 11px;
   color: var(--text-muted);
@@ -214,7 +279,12 @@ body {
   text-align: right;
 }
 
-/* ========== 歌曲列表标题 ========== */
+/* #endregion */
+/* #endregion */
+/* #region 4. 歌曲列表样式 */
+/* ==================== 4. 歌曲列表样式 ==================== */
+
+/* 4.1 歌曲列表标题（如"全部歌曲"或歌单名） */
 .song-list-header {
   padding: 8px 16px 4px;
   display: flex;
@@ -228,6 +298,7 @@ body {
   color: var(--text);
 }
 
+/* 4.2 搜索框 */
 .search-box {
   padding: 0 16px 12px;
 }
@@ -236,7 +307,7 @@ body {
   width: 100%;
   padding: 10px 16px;
   border-radius: 8px;
-  border: 1px solid transparent;
+  border: 1px solid transparent; /* 透明边框 */
   background: var(--bg-hover);
   color: var(--text);
   font-size: 13px;
@@ -244,21 +315,25 @@ body {
   transition: border-color 0.2s, background 0.2s;
 }
 
+/* 4.3 搜索框聚焦状态 */
 .search-box input:focus {
-  border-color: var(--primary);
+  border-color: var(--primary); /* 边框变绿 */
   background: var(--bg-active);
 }
 
+/* 4.4 搜索框占位符文字 */
 .search-box input::placeholder {
   color: var(--text-muted);
 }
 
+/* 4.5 歌曲列表容器（可滚动） */
 .song-list {
-  flex: 1;
+  flex: 1;                      /* 占据剩余空间 */
   overflow-y: auto;
   padding: 4px 8px;
 }
 
+/* 4.6 歌曲列表滚动条样式 */
 .song-list::-webkit-scrollbar {
   width: 6px;
 }
@@ -276,6 +351,7 @@ body {
   background: var(--text-muted);
 }
 
+/* 4.7 空列表提示（如"暂无歌曲，点击上传"） */
 .empty-tip {
   text-align: center;
   color: var(--text-muted);
@@ -284,6 +360,7 @@ body {
   line-height: 1.6;
 }
 
+/* 4.8 加载更多提示 */
 .loading-more {
   text-align: center;
   color: var(--text-muted);
@@ -291,6 +368,7 @@ body {
   font-size: 13px;
 }
 
+/* 4.9 歌曲项（每首歌） */
 .song-item {
   display: flex;
   align-items: center;
@@ -299,21 +377,24 @@ body {
   cursor: pointer;
   transition: background 0.15s;
   gap: 8px;
-  position: relative;
+  position: relative;           /* 相对定位（用于播放指示器） */
 }
 
 .song-item:hover {
   background: var(--bg-hover);
 }
 
+/* 4.10 选中的歌曲项 */
 .song-item.active {
   background: var(--bg-active);
 }
 
+/* 4.11 正在播放的歌曲：标题变绿 */
 .song-item.playing .song-item-title {
   color: var(--primary);
 }
 
+/* 4.12 正在播放的歌曲：左侧绿色指示条 */
 .song-item.playing::before {
   content: '';
   position: absolute;
@@ -326,6 +407,7 @@ body {
   border-radius: 0 2px 2px 0;
 }
 
+/* 4.13 歌曲序号/播放图标 */
 .song-item-index {
   font-size: 12px;
   color: var(--text-muted);
@@ -333,26 +415,30 @@ body {
   text-align: center;
 }
 
+/* 4.14 正在播放的歌曲：序号变绿 */
 .song-item.playing .song-item-index {
   color: var(--primary);
 }
 
+/* 4.15 歌曲信息容器 */
 .song-item-info {
   flex: 1;
-  min-width: 0;
+  min-width: 0;                 /* 允许缩小 */
   overflow: hidden;
 }
 
+/* 4.16 歌曲标题 */
 .song-item-title {
   font-size: 14px;
   font-weight: 500;
   white-space: nowrap;
   overflow: hidden;
-  text-overflow: ellipsis;
+  text-overflow: ellipsis;      /* 超出部分显示省略号 */
   line-height: 1.4;
   max-width: 160px;
 }
 
+/* 4.17 歌曲元信息（时长等） */
 .song-item-meta {
   display: flex;
   align-items: center;
@@ -360,13 +446,15 @@ body {
   margin-top: 2px;
 }
 
+/* 4.18 歌曲时长 */
 .song-item-duration {
   font-size: 12px;
   color: var(--text-muted);
-  font-variant-numeric: tabular-nums;
-  flex-shrink: 0;
+  font-variant-numeric: tabular-nums; /* 等宽数字 */
+  flex-shrink: 0;               /* 不缩小 */
 }
 
+/* 4.19 歌词标记 */
 .song-item-lyrics {
   font-size: 10px;
   color: var(--primary);
@@ -376,9 +464,10 @@ body {
 }
 
 .song-item:hover .song-item-lyrics {
-  opacity: 1;
+  opacity: 1;                   /* 悬停时显示 */
 }
 
+/* 4.20 重命名输入框 */
 .rename-input {
   width: 100%;
   background: var(--bg-hover);
@@ -390,6 +479,7 @@ body {
   outline: none;
 }
 
+/* 4.21 删除按钮（默认隐藏，悬停显示） */
 .song-item-delete {
   opacity: 0;
   background: none;
@@ -408,10 +498,11 @@ body {
 }
 
 .song-item-delete:hover {
-  color: #e74c3c;
+  color: #e74c3c;               /* 红色 */
   background: rgba(231, 76, 60, 0.1);
 }
 
+/* 4.22 更多菜单按钮（⋯） */
 .song-item-menu {
   background: none;
   border: none;
@@ -422,7 +513,7 @@ body {
   border-radius: 4px;
   transition: all 0.15s;
   line-height: 1;
-  letter-spacing: 2px;
+  letter-spacing: 2px;          /* ⋯三个点的间距 */
   flex-shrink: 0;
 }
 
@@ -431,23 +522,29 @@ body {
   background: rgba(255,255,255,0.08);
 }
 
-/* 右键菜单 */
+/* #endregion */
+/* #region 5. 右键菜单样式 */
+/* ==================== 5. 右键菜单样式 ==================== */
+
+/* 5.1 右键菜单容器（默认隐藏） */
 .context-menu {
-  display: none;
-  position: fixed;
+  display: none;                /* 默认隐藏 */
+  position: fixed;              /* 固定定位（跟随鼠标） */
   background: #282828;
   border: 1px solid rgba(255,255,255,0.1);
   border-radius: 8px;
   padding: 6px 0;
   min-width: 140px;
   box-shadow: 0 8px 24px rgba(0,0,0,0.5);
-  z-index: 1000;
+  z-index: 1000;                /* 最高层级 */
 }
 
+/* 5.2 显示右键菜单 */
 .context-menu.visible {
   display: block;
 }
 
+/* 5.3 右键菜单项 */
 .context-menu-item {
   padding: 10px 16px;
   font-size: 13px;
@@ -461,6 +558,7 @@ body {
   color: var(--text);
 }
 
+/* 5.4 右键菜单子标题（如"选择歌单"） */
 .context-menu-subtitle {
   padding: 8px 16px 4px;
   font-size: 11px;
@@ -469,57 +567,69 @@ body {
   letter-spacing: 0.5px;
 }
 
+/* 5.5 子菜单（如"添加到歌单"的子菜单） */
 .context-menu.submenu {
   min-width: 160px;
 }
 
-  /* ========== 分页 ========== */
-  .pagination {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 12px;
-    padding: 12px 16px;
-    border-top: 1px solid var(--border);
-    background: var(--bg-card);
-    flex-shrink: 0;
-  }
+/* #endregion */
+/* #region 6. 分页控件样式 */
+/* ==================== 6. 分页控件样式 ==================== */
 
-  .page-btn {
-    background: var(--bg-hover);
-    border: 1px solid var(--border);
-    color: var(--text-dim);
-    font-size: 18px;
-    width: 40px;
-    height: 40px;
-    border-radius: 8px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.15s;
-  }
+/* 6.1 分页容器 */
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--border);
+  background: var(--bg-card);
+  flex-shrink: 0;               /* 不缩小 */
+}
 
-  .page-btn:hover:not(:disabled) {
-    border-color: var(--primary);
-    color: var(--primary);
-  }
+/* 6.2 分页按钮（上一页/下一页） */
+.page-btn {
+  background: var(--bg-hover);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  font-size: 18px;
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
 
-  .page-btn:disabled {
-    opacity: 0.3;
-    cursor: not-allowed;
-  }
+.page-btn:hover:not(:disabled) {
+  border-color: var(--primary);
+  color: var(--primary);
+}
 
-  .page-info {
-    font-size: 14px;
-    color: var(--text-dim);
-    min-width: 60px;
-    text-align: center;
-  }
+/* 6.3 禁用状态的分页按钮 */
+.page-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
 
-/* ========== 主区域 ========== */
+/* 6.4 页码显示（如"1 / 5"） */
+.page-info {
+  font-size: 14px;
+  color: var(--text-dim);
+  min-width: 60px;
+  text-align: center;
+}
+
+/* #endregion */
+/* #region 7. 主区域样式 */
+/* ==================== 7. 主区域样式（播放器封面、歌曲信息） ==================== */
+
+/* 7.1 主区域容器 */
 .main {
-  flex: 1;
+  flex: 1;                      /* 占据剩余空间 */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -528,27 +638,30 @@ body {
   overflow: hidden;
 }
 
-/* 播放展示区 */
+/* 7.2 播放器显示区（封面 + 歌曲信息） */
 .player-display {
   text-align: center;
-  animation: fadeIn 0.4s ease;
+  animation: fadeIn 0.4s ease;  /* 淡入动画 */
   flex-shrink: 0;
 }
 
+/* 7.3 淡入动画 */
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
+/* 7.4 封面包装器 */
 .cover-wrapper {
   margin-bottom: 32px;
-  perspective: 800px;
+  perspective: 800px;           /* 3D透视效果 */
 }
 
+/* 7.5 封面图片容器 */
 .cover {
   width: 260px;
   height: 260px;
-  border-radius: 16px;
+  border-radius: 50%;           /* 始终是圆形 */
   background: linear-gradient(145deg, #2a2a2a, #1a1a1a);
   display: flex;
   align-items: center;
@@ -560,37 +673,42 @@ body {
   position: relative;
 }
 
+/* 7.6 封面边框效果 */
 .cover::before {
   content: '';
   position: absolute;
   inset: 0;
-  border-radius: 16px;
+  border-radius: 50%;           /* 始终是圆形 */
   border: 1px solid rgba(255,255,255,0.08);
   pointer-events: none;
 }
 
+/* 7.7 封面旋转动画（播放时） */
 .cover.spinning {
-  animation: spin 20s linear infinite;
-  border-radius: 50%;
+  animation: spin 20s linear infinite; /* 20秒一圈，无限循环 */
 }
 
+/* 7.8 旋转动画 */
 @keyframes spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
 
+/* 7.9 封面图片 */
 .cover img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: cover;            /* 保持比例填充 */
 }
 
+/* 7.10 默认封面图标（♪） */
 .cover-default {
   font-size: 72px;
   color: var(--text-muted);
   opacity: 0.5;
 }
 
+/* 7.11 歌曲标题 */
 .song-title {
   font-size: 26px;
   font-weight: 700;
@@ -598,14 +716,19 @@ body {
   letter-spacing: -0.5px;
 }
 
+/* 7.12 歌手名称 */
 .song-artist {
   color: var(--text-dim);
   font-size: 15px;
 }
 
-/* ========== 底部播放栏 ========== */
+/* #endregion */
+/* #region 8. 底部播放栏样式 */
+/* ==================== 8. 底部播放栏样式 ==================== */
+
+/* 8.1 底部播放栏容器 */
 .player-bar {
-  position: fixed;
+  position: fixed;              /* 固定在底部 */
   bottom: 0;
   left: 0;
   right: 0;
@@ -613,9 +736,10 @@ body {
   background: linear-gradient(to top, #0d0d0d, #141414);
   border-top: 1px solid rgba(255,255,255,0.05);
   z-index: 100;
-  backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);  /* 毛玻璃效果 */
 }
 
+/* 8.2 进度条容器 */
 .progress-bar {
   height: 4px;
   background: rgba(255,255,255,0.1);
@@ -624,19 +748,22 @@ body {
   transition: height 0.15s;
 }
 
+/* 8.3 进度条悬停时变粗 */
 .progress-bar:hover {
   height: 6px;
 }
 
+/* 8.4 进度条填充部分（绿色） */
 .progress {
   height: 100%;
   background: linear-gradient(90deg, var(--primary), var(--primary-hover));
   width: 0%;
-  transition: width 0.1s linear;
+  transition: width 0.1s linear; /* 平滑过渡 */
   position: relative;
   border-radius: 0 3px 3px 0;
 }
 
+/* 8.5 进度条拖拽手柄（悬停时显示） */
 .progress::after {
   content: '';
   position: absolute;
@@ -647,23 +774,25 @@ body {
   height: 14px;
   background: var(--text);
   border-radius: 50%;
-  opacity: 0;
+  opacity: 0;                   /* 默认隐藏 */
   transition: opacity 0.2s;
   box-shadow: 0 0 8px rgba(0,0,0,0.3);
 }
 
 .progress-bar:hover .progress::after {
-  opacity: 1;
+  opacity: 1;                   /* 悬停时显示 */
 }
 
+/* 8.6 控制按钮区域 */
 .controls {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: calc(96px - 4px);
+  height: calc(96px - 4px);     /* 高度 = 播放栏高度 - 进度条高度 */
   padding: 0 24px;
 }
 
+/* 8.7 左侧：时间显示 */
 .controls-left,
 .controls-right {
   display: flex;
@@ -676,6 +805,7 @@ body {
   justify-content: flex-end;
 }
 
+/* 8.8 时间文字 */
 .time {
   font-size: 12px;
   color: var(--text-dim);
@@ -683,17 +813,20 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
+/* 8.9 时间分隔符 "/" */
 .time-sep {
   color: var(--text-muted);
   font-size: 12px;
 }
 
+/* 8.10 中间：播放控制按钮 */
 .controls-center {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
+/* 8.11 控制按钮基础样式 */
 .btn-ctrl {
   background: none;
   border: none;
@@ -713,9 +846,10 @@ body {
 }
 
 .btn-ctrl:active {
-  transform: scale(0.92);
+  transform: scale(0.92);       /* 点击时缩小 */
 }
 
+/* 8.12 播放/暂停按钮（大号白色圆形） */
 .btn-play {
   font-size: 22px;
   color: var(--bg-dark);
@@ -731,30 +865,35 @@ body {
 }
 
 .btn-ctrl.btn-play:hover {
-  transform: scale(1.08);
+  transform: scale(1.08);       /* 放大 */
   background: #fff;
   color: var(--bg-dark) !important;
 }
 
+/* 8.13 歌词按钮 */
 #lyricsBtn {
   font-size: 13px;
   font-weight: 600;
   letter-spacing: 1px;
 }
 
+/* 8.14 激活状态的控制按钮（如随机播放、循环） */
 .btn-ctrl.active {
   color: var(--primary);
 }
 
+/* 8.15 歌词按钮激活状态 */
 .btn-ctrl.lyrics-active {
   color: var(--primary);
   background: rgba(29, 185, 84, 0.1);
 }
 
+/* 8.16 音量滑块容器 */
 .volume-slider {
   width: 100px;
 }
 
+/* 8.17 音量数值显示 */
 .volume-value {
   font-size: 12px;
   color: var(--text-muted);
@@ -763,10 +902,11 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
+/* 8.18 音量滑块样式 */
 .volume-slider input {
   width: 100%;
   height: 4px;
-  -webkit-appearance: none;
+  -webkit-appearance: none;     /* 移除默认样式 */
   background: rgba(255,255,255,0.15);
   border-radius: 2px;
   outline: none;
@@ -777,6 +917,7 @@ body {
   background: rgba(255,255,255,0.25);
 }
 
+/* 8.19 音量滑块拖拽手柄 */
 .volume-slider input::-webkit-slider-thumb {
   -webkit-appearance: none;
   width: 12px;
@@ -791,7 +932,11 @@ body {
   transform: scale(1.2);
 }
 
-/* ========== 上传弹窗 ========== */
+/* #endregion */
+/* #region 9. 上传弹窗样式 */
+/* ==================== 9. 上传弹窗样式 ==================== */
+
+/* 9.1 上传弹窗遮罩（默认隐藏） */
 .upload-modal {
   display: none;
   position: fixed;
@@ -803,10 +948,12 @@ body {
   backdrop-filter: blur(8px);
 }
 
+/* 9.2 显示上传弹窗 */
 .upload-modal.active {
   display: flex;
 }
 
+/* 9.3 上传弹窗内容 */
 .upload-modal-content {
   background: var(--bg-card);
   padding: 36px;
@@ -823,6 +970,7 @@ body {
   font-weight: 600;
 }
 
+/* 9.4 上传进度条容器 */
 .upload-progress-bar {
   height: 6px;
   background: rgba(255,255,255,0.1);
@@ -831,6 +979,7 @@ body {
   margin-bottom: 16px;
 }
 
+/* 9.5 上传进度条填充 */
 .upload-progress {
   height: 100%;
   background: linear-gradient(90deg, var(--primary), var(--primary-hover));
@@ -839,12 +988,17 @@ body {
   border-radius: 3px;
 }
 
+/* 9.6 上传状态文字 */
 #uploadStatus {
   color: var(--text-dim);
   font-size: 13px;
 }
 
-/* ========== 歌词面板 ========== */
+/* #endregion */
+/* #region 10. 歌词面板样式 */
+/* ==================== 10. 歌词面板样式 ==================== */
+
+/* 10.1 歌词面板容器（默认隐藏在右侧） */
 .lyrics-panel {
   position: absolute;
   right: 0;
@@ -856,18 +1010,20 @@ body {
   border-left: 1px solid rgba(255, 255, 255, 0.06);
   display: flex;
   flex-direction: column;
-  opacity: 0;
-  transform: translateX(20px);
+  opacity: 0;                   /* 默认透明 */
+  transform: translateX(20px);  /* 默认向右偏移 */
   transition: opacity 0.3s, transform 0.3s;
-  pointer-events: none;
+  pointer-events: none;         /* 不接收点击 */
 }
 
+/* 10.2 显示歌词面板 */
 .lyrics-panel.visible {
   opacity: 1;
   transform: translateX(0);
   pointer-events: auto;
 }
 
+/* 10.3 歌词面板头部 */
 .lyrics-header {
   display: flex;
   align-items: center;
@@ -876,12 +1032,14 @@ body {
   flex-shrink: 0;
 }
 
+/* 10.4 "歌词"标题 */
 .lyrics-title {
   font-size: 15px;
   font-weight: 600;
   color: var(--text-dim);
 }
 
+/* 10.5 导入歌词按钮 */
 .lyrics-upload-btn {
   font-size: 12px;
   color: var(--primary);
@@ -896,13 +1054,15 @@ body {
   background: rgba(29, 185, 84, 0.2);
 }
 
+/* 10.6 歌词内容区域（可滚动） */
 .lyrics-content {
   flex: 1;
   overflow-y: auto;
   padding: 8px 24px 80px;
-  scroll-behavior: smooth;
+  scroll-behavior: smooth;      /* 平滑滚动 */
 }
 
+/* 10.7 歌词滚动条 */
 .lyrics-content::-webkit-scrollbar {
   width: 4px;
 }
@@ -912,6 +1072,7 @@ body {
   border-radius: 2px;
 }
 
+/* 10.8 无歌词提示 */
 .lyrics-empty {
   text-align: center;
   color: var(--text-muted);
@@ -919,6 +1080,7 @@ body {
   font-size: 14px;
 }
 
+/* 10.9 歌词行 */
 .lyrics-line {
   padding: 10px 0;
   font-size: 15px;
@@ -932,17 +1094,23 @@ body {
   color: var(--text-dim);
 }
 
+/* 10.10 当前播放的歌词行（高亮） */
 .lyrics-line.active {
   color: var(--text);
   font-size: 18px;
   font-weight: 600;
 }
 
+/* 10.11 已经播放过的歌词行（变暗） */
 .lyrics-line.past {
   color: var(--text-dim);
 }
 
-/* ========== 手机端遮罩 ========== */
+/* #endregion */
+/* #region 11. 手机端遮罩和菜单按钮 */
+/* ==================== 11. 手机端遮罩和菜单按钮 ==================== */
+
+/* 11.1 手机端遮罩层（点击关闭侧边栏） */
 .mobile-overlay {
   display: none;
   position: fixed;
@@ -955,9 +1123,9 @@ body {
   display: block;
 }
 
-/* ========== 手机端菜单按钮 ========== */
+/* 11.2 手机端菜单按钮（☰） */
 .btn-menu-mobile {
-  display: none;
+  display: none;                /* 电脑端隐藏 */
   position: absolute;
   top: 16px;
   left: 16px;
@@ -972,15 +1140,19 @@ body {
   backdrop-filter: blur(8px);
 }
 
-/* ========== 响应式 ========== */
+/* #endregion */
+/* #region 12. 响应式布局（手机端适配） */
+/* ==================== 12. 响应式布局（手机端适配） ==================== */
+/* 当屏幕宽度≤768px时，应用手机端样式 */
+
 @media (max-width: 768px) {
-  /* 全屏布局 */
+  /* 12.1 整体布局改为上下排列 */
   .app {
     height: 100vh;
-    flex-direction: column;
+    flex-direction: column;     /* 垂直排列 */
   }
 
-  /* 顶部：播放区占满屏幕 */
+  /* 12.2 主区域占满屏幕 */
   .main {
     flex: 1;
     display: flex;
@@ -992,15 +1164,17 @@ body {
     overflow: hidden;
   }
 
+  /* 12.3 显示菜单按钮 */
   .btn-menu-mobile {
     display: block;
   }
 
+  /* 12.4 显示关闭侧边栏按钮 */
   .btn-close-sidebar {
     display: block;
   }
 
-  /* 封面居中放大 */
+  /* 12.5 封面居中放大 */
   .player-display {
     flex: 1;
     display: flex;
@@ -1014,12 +1188,13 @@ body {
     margin-bottom: 24px;
   }
 
+  /* 12.6 封面大小改为屏幕宽度的65% */
   .cover {
     width: 65vw;
     height: 65vw;
     max-width: 280px;
     max-height: 280px;
-    border-radius: 16px;
+    border-radius: 50%;           /* 手机端也是圆形 */
   }
 
   .song-title {
@@ -1033,7 +1208,7 @@ body {
     color: var(--text-dim);
   }
 
-  /* 歌词面板：覆盖在封面上方 */
+  /* 12.7 歌词面板：从底部滑出，覆盖全屏 */
   .lyrics-panel {
     position: absolute;
     inset: 0;
@@ -1043,7 +1218,7 @@ body {
     backdrop-filter: blur(30px);
     border-left: none;
     border-radius: 0;
-    transform: translateY(100%);
+    transform: translateY(100%); /* 默认在屏幕下方 */
     top: auto;
     bottom: 0;
     opacity: 1;
@@ -1051,7 +1226,7 @@ body {
   }
 
   .lyrics-panel.visible {
-    transform: translateY(0);
+    transform: translateY(0);   /* 滑入屏幕 */
   }
 
   .lyrics-header {
@@ -1071,24 +1246,24 @@ body {
     font-size: 20px;
   }
 
-  /* 侧边栏：全屏抽屉 */
+  /* 12.8 侧边栏：全屏抽屉（从左侧滑入） */
   .sidebar {
     position: fixed;
     top: 0;
     bottom: 0;
     left: 0;
-    width: 80vw;
+    width: 80vw;                /* 屏幕宽度的80% */
     max-width: 320px;
     z-index: 200;
-    transform: translateX(-100%);
+    transform: translateX(-100%); /* 默认隐藏在左侧 */
     transition: transform 0.3s ease;
   }
 
   .sidebar.open {
-    transform: translateX(0);
+    transform: translateX(0);   /* 滑入屏幕 */
   }
 
-  /* 移动端歌单区域 */
+  /* 12.9 手机端隐藏歌单区域（简化界面） */
   .playlist-section {
     display: none;
   }
@@ -1101,18 +1276,20 @@ body {
     padding: 8px 16px;
   }
 
+  /* 12.10 歌曲列表固定高度 */
   .song-list {
     height: 500px;
     overflow-y: auto;
   }
 
-  /* 底部：播放控制栏 */
+  /* 12.11 底部播放栏：适配iPhone安全区域 */
   .player-bar {
     height: auto;
     padding-bottom: env(safe-area-inset-bottom, 0);
     background: linear-gradient(to top, #0d0d0d 60%, transparent);
   }
 
+  /* 12.12 进度条变细 */
   .progress-bar {
     height: 3px;
     margin: 0 16px;
@@ -1120,9 +1297,10 @@ body {
   }
 
   .progress-bar:hover {
-    height: 3px;
+    height: 3px;                /* 手机端悬停不变粗 */
   }
 
+  /* 12.13 控制按钮：居中排列，隐藏时间和音量 */
   .controls {
     display: flex;
     align-items: center;
@@ -1132,6 +1310,7 @@ body {
     gap: 0;
   }
 
+  /* 12.14 隐藏左侧（时间显示） */
   .controls-left {
     display: none;
   }
@@ -1143,10 +1322,12 @@ body {
     padding-bottom: 0;
   }
 
+  /* 12.15 隐藏右侧（音量控制） */
   .controls-right {
     display: none;
   }
 
+  /* 12.16 播放按钮放大 */
   .btn-play {
     width: 56px;
     height: 56px;
@@ -1163,6 +1344,7 @@ body {
     padding: 6px 10px;
   }
 
+  /* 12.17 右键菜单：改为底部弹出 */
   .context-menu {
     position: fixed;
     bottom: 0;
@@ -1182,6 +1364,7 @@ body {
     border-radius: 12px 12px 0 0;
   }
 
+  /* 12.18 分页控件 */
   .pagination {
     padding: 10px 16px;
     flex-shrink: 0;
