@@ -1263,11 +1263,7 @@ body {
     transform: translateX(0);   /* 滑入屏幕 */
   }
 
-  /* 12.9 手机端隐藏歌单区域（简化界面） */
-  .playlist-section {
-    display: none;
-  }
-
+  /* 12.9 搜索框 */
   .search-box {
     padding: 8px 16px;
   }
