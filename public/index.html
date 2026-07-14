@@ -53,6 +53,13 @@
   <title>music-播放器</title>  <!-- 浏览器标签页显示的标题 -->
   <link rel="manifest" href="manifest.json">  <!-- 引入 PWA 配置文件（让网页能像 App 一样安装） -->
   <link rel="stylesheet" href="css/style.css?v=7">  <!-- 引入样式文件，?v=7 是版本号，用于清除缓存 -->
+  <!-- PWA: 注册 Service Worker -->
+  <link rel="apple-touch-icon" href="/icon-192.png">  <!-- iOS 添加到主屏幕的图标 -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js');
+    }
+  </script>
 </head>  <!-- head 结束 -->
 <body>  <!-- 身体：存放页面所有可见的内容 -->
 
