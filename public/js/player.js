@@ -726,7 +726,7 @@ class MusicPlayer {
 
   // 删除歌曲
   async deleteSong(id) {
-    if (!confirm('确定删除这首歌曲？')) return; // 确认删除
+    if (!confirm('确定删除这首歌曲？')) return;
     try {
       const res = await fetch(`/api/songs/${id}`, { method: 'DELETE' });
       if (res.ok) {
@@ -737,19 +737,30 @@ class MusicPlayer {
         this.songs = this.songs.filter(s => s.id !== id);
         this.allSongs = this.allSongs.filter(s => s.id !== id);
 
-        // 如果删除的是正在播放的歌曲，停掉并切换到下一首
+        // 立即更新列表显示（歌曲消失）
+        const countEl = document.getElementById('songCount');
+        if (countEl) countEl.textContent = this.songs.length + ' 首';
+        this.renderList(document.getElementById('searchInput').value);
+
+        // 如果删除的是正在播放的歌曲，无缝切换到下一首
         if (isPlaying) {
-          this.audio.pause();
-          this.audio.src = '';
           if (this.songs.length > 0) {
-            // 从当前位置继续（因为歌曲已移除，当前位置变成下一首）
+            // 索引已经自动指向下一首（因为当前歌曲被移除了）
             if (this.currentIndex >= this.songs.length) {
-              this.currentIndex = 0; // 如果是最后一首，回到第一首
+              this.currentIndex = 0; // 最后一首则回到第一首
             }
-            await this.loadSong(this.currentIndex);
+            // 直接设置音频源并播放，不停顿
+            const nextSong = this.songs[this.currentIndex];
+            this.audio.src = `/api/stream/${nextSong.id}`;
+            this.songTitle.textContent = nextSong.title;
+            this.songArtist.textContent = nextSong.original_name;
+            this.updateMediaSession(nextSong);
+            this.audio.play().catch(() => this.scheduleResume());
           } else {
-            // 没有歌曲了，重置播放器
+            // 没有歌曲了
             this.currentIndex = -1;
+            this.audio.pause();
+            this.audio.src = '';
             this.songTitle.textContent = '未选择歌曲';
             this.songArtist.textContent = '';
             this.songCover.src = '';
@@ -757,21 +768,14 @@ class MusicPlayer {
             this.currentTimeEl.textContent = '00:00';
           }
         } else if (this.currentIndex >= 0) {
-          // 删除的不是当前歌曲，但需要更新索引
+          // 删除的不是当前歌曲，更新索引
           const currentId = this.songs[this.currentIndex] ? this.songs[this.currentIndex].id : null;
           if (currentId) {
-            // 找到当前歌曲在新列表中的位置
             const newIndex = this.songs.findIndex(s => s.id === currentId);
-            if (newIndex !== -1) {
-              this.currentIndex = newIndex;
-            }
+            if (newIndex !== -1) this.currentIndex = newIndex;
           }
         }
 
-        // 更新歌曲数量显示
-        const countEl = document.getElementById('songCount');
-        if (countEl) countEl.textContent = this.songs.length + ' 首';
-        this.renderList(document.getElementById('searchInput').value);
         // 刷新歌单列表
         if (window.playlistManager) {
           window.playlistManager.loadPlaylists();
