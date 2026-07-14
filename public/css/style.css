@@ -280,6 +280,30 @@ body {
   text-align: right;
 }
 
+/* 3.14 歌单三个点菜单按钮 */
+.playlist-item-menu {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  font-size: 16px;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 4px;
+  opacity: 0;
+  transition: opacity 0.2s;
+  line-height: 1;
+}
+
+/* 电脑端：悬停显示 */
+.playlist-item:hover .playlist-item-menu {
+  opacity: 1;
+}
+
+.playlist-item-menu:hover {
+  background: rgba(255,255,255,0.1);
+  color: var(--text);
+}
+
 /* #endregion */
 /* #endregion */
 /* #region 4. 歌曲列表样式 */
@@ -1409,6 +1433,11 @@ body {
   /* 12.4 显示关闭侧边栏按钮 */
   .btn-close-sidebar {
     display: block;
+  }
+
+  /* 12.4.1 手机端歌单三个点菜单一直显示 */
+  .playlist-item-menu {
+    opacity: 1;
   }
 
   /* 12.5 封面居中放大 */

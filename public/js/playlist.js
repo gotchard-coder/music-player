@@ -123,18 +123,24 @@ class PlaylistManager {
       // 如果是当前选中的歌单，加上active样式
       item.className = 'playlist-item' + (this.currentPlaylistId === playlist.id ? ' active' : '');
       item.dataset.id = playlist.id; // 存储歌单ID
-      // 内部HTML：歌单名称 + 歌曲数量
+      // 内部HTML：歌单名称 + 歌曲数量 + 三个点菜单
       item.innerHTML = `
         <span class="playlist-item-name">${this.escapeHtml(playlist.name)}</span>
         <span class="playlist-item-count">${playlist.song_count || 0}</span>
+        <button class="playlist-item-menu" data-playlist-id="${playlist.id}" data-playlist-name="${this.escapeHtml(playlist.name)}">⋮</button>
       `;
       // 点击歌单 → 选中这个歌单
-      item.addEventListener('click', () => this.selectPlaylist(playlist.id));
+      item.addEventListener('click', (e) => {
+        // 如果点击的是三个点按钮，不切换歌单
+        if (e.target.classList.contains('playlist-item-menu')) return;
+        this.selectPlaylist(playlist.id);
+      });
 
-      // 右键菜单
-      item.addEventListener('contextmenu', (e) => {
-        e.preventDefault(); // 阻止浏览器默认右键菜单
-        this.showPlaylistMenu(e, playlist); // 显示自定义右键菜单
+      // 三个点按钮点击事件
+      const menuBtn = item.querySelector('.playlist-item-menu');
+      menuBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.showPlaylistMenu(e, playlist);
       });
 
       container.appendChild(item); // 添加到容器
