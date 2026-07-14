@@ -38,40 +38,49 @@ class AudioTrimmer {
   init() {
     // 关闭按钮
     document.getElementById('trimClose').addEventListener('click', () => this.close());
-
-    // 点击遮罩关闭
     this.modal.addEventListener('click', (e) => {
       if (e.target === this.modal) this.close();
     });
 
-    // 拖动选区
-    this.handleLeft.addEventListener('mousedown', (e) => this.startDrag(e, 'left'));
-    this.handleRight.addEventListener('mousedown', (e) => this.startDrag(e, 'right'));
+    // ===== 鼠标事件 =====
+    // 选区手柄
+    this.handleLeft.addEventListener('mousedown', (e) => { e.stopPropagation(); this.startDrag(e, 'left'); });
+    this.handleRight.addEventListener('mousedown', (e) => { e.stopPropagation(); this.startDrag(e, 'right'); });
     this.selection.addEventListener('mousedown', (e) => {
-      if (e.target === this.selection) this.startDrag(e, 'body');
+      if (e.target === this.selection) { e.stopPropagation(); this.startDrag(e, 'body'); }
     });
 
-    // 拖动光标
-    this.cursor.addEventListener('mousedown', (e) => this.startDrag(e, 'cursor'));
-    // 点击波形区域移动光标
-    this.canvas.addEventListener('click', (e) => this.moveCursorTo(e));
+    // 光标拖动
+    this.cursor.addEventListener('mousedown', (e) => { e.stopPropagation(); this.startDrag(e, 'cursor'); });
+
+    // 点击波形移动光标
+    this.canvas.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      this.moveCursorToMouse(e);
+      this.startDrag(e, 'cursor');
+    });
 
     document.addEventListener('mousemove', (e) => this.onDrag(e));
     document.addEventListener('mouseup', () => this.stopDrag());
 
-    // 触摸支持
-    this.handleLeft.addEventListener('touchstart', (e) => this.startDrag(e, 'left'));
-    this.handleRight.addEventListener('touchstart', (e) => this.startDrag(e, 'right'));
+    // ===== 触摸事件 =====
+    this.handleLeft.addEventListener('touchstart', (e) => { e.stopPropagation(); this.startDrag(e, 'left'); }, { passive: false });
+    this.handleRight.addEventListener('touchstart', (e) => { e.stopPropagation(); this.startDrag(e, 'right'); }, { passive: false });
     this.selection.addEventListener('touchstart', (e) => {
-      if (e.target === this.selection) this.startDrag(e, 'body');
-    });
-    this.cursor.addEventListener('touchstart', (e) => this.startDrag(e, 'cursor'));
-    document.addEventListener('touchmove', (e) => this.onDrag(e));
+      if (e.target === this.selection) { e.stopPropagation(); this.startDrag(e, 'body'); }
+    }, { passive: false });
+    this.cursor.addEventListener('touchstart', (e) => { e.stopPropagation(); this.startDrag(e, 'cursor'); }, { passive: false });
+    this.canvas.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      this.moveCursorToTouch(e);
+      this.startDrag(e, 'cursor');
+    }, { passive: false });
+
+    document.addEventListener('touchmove', (e) => this.onDrag(e), { passive: false });
     document.addEventListener('touchend', () => this.stopDrag());
 
-    // 播放/暂停按钮
+    // 按钮
     this.playPauseBtn.addEventListener('click', () => this.togglePlayPause());
-    // 保存按钮
     this.saveBtn.addEventListener('click', () => this.save());
   }
 
@@ -87,26 +96,23 @@ class AudioTrimmer {
       if (!this.audioContext) {
         this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
       }
-
       const res = await fetch(`/api/stream/${song.id}`);
       const arrayBuffer = await res.arrayBuffer();
       this.audioBuffer = await this.audioContext.decodeAudioData(arrayBuffer);
 
       this.drawWaveform();
-
       this.selectStart = 0;
       this.selectEnd = 1;
       this.cursorPos = 0;
       this.updateSelection();
       this.updateCursor();
       this.updatePlayPauseBtn();
-      this.statusEl.textContent = '点击波形移动光标，拖动白色区域选择保留的片段';
+      this.statusEl.textContent = '点击波形设置光标位置，点播放从光标处开始';
     } catch (err) {
       this.statusEl.textContent = '加载失败：' + err.message;
     }
   }
 
-  // 关闭剪辑面板
   close() {
     this.stopPlayback();
     this.modal.classList.remove('visible');
@@ -116,11 +122,10 @@ class AudioTrimmer {
     this.updatePlayPauseBtn();
   }
 
-  // 绘制波形
+  // ===== 波形绘制 =====
   drawWaveform() {
     const buffer = this.audioBuffer;
     if (!buffer) return;
-
     const width = this.canvas.width;
     const height = this.canvas.height;
     const data = buffer.getChannelData(0);
@@ -133,48 +138,43 @@ class AudioTrimmer {
     this.ctx.beginPath();
     this.ctx.strokeStyle = '#4ecdc4';
     this.ctx.lineWidth = 1;
-
     for (let i = 0; i < width; i++) {
-      let min = 1.0;
-      let max = -1.0;
+      let min = 1.0, max = -1.0;
       for (let j = 0; j < step; j++) {
-        const datum = data[(i * step) + j] || 0;
-        if (datum < min) min = datum;
-        if (datum > max) max = datum;
+        const d = data[(i * step) + j] || 0;
+        if (d < min) min = d;
+        if (d > max) max = d;
       }
-      const yMin = (1 + min) * height / 2;
-      const yMax = (1 + max) * height / 2;
-      this.ctx.moveTo(i, yMin);
-      this.ctx.lineTo(i, yMax);
+      this.ctx.moveTo(i, (1 + min) * height / 2);
+      this.ctx.lineTo(i, (1 + max) * height / 2);
     }
     this.ctx.stroke();
   }
 
-  // 更新选区显示
+  // ===== 选区 =====
   updateSelection() {
-    const left = this.selectStart * 100;
-    const width = (this.selectEnd - this.selectStart) * 100;
-    this.selection.style.left = left + '%';
-    this.selection.style.width = width + '%';
-
-    const duration = this.audioBuffer.duration;
-    const startTime = this.selectStart * duration;
-    const endTime = this.selectEnd * duration;
-    this.startInput.value = this.formatTime(startTime);
-    this.endInput.value = this.formatTime(endTime);
-    this.durationInput.value = this.formatTime(endTime - startTime);
+    this.selection.style.left = (this.selectStart * 100) + '%';
+    this.selection.style.width = ((this.selectEnd - this.selectStart) * 100) + '%';
+    const dur = this.audioBuffer.duration;
+    this.startInput.value = this.formatTime(this.selectStart * dur);
+    this.endInput.value = this.formatTime(this.selectEnd * dur);
+    this.durationInput.value = this.formatTime((this.selectEnd - this.selectStart) * dur);
   }
 
-  // 更新光标位置
+  // ===== 光标 =====
   updateCursor() {
     this.cursor.style.left = (this.cursorPos * 100) + '%';
   }
 
-  // 点击波形移动光标
-  moveCursorTo(e) {
+  moveCursorToMouse(e) {
     const rect = this.canvas.getBoundingClientRect();
-    const x = (e.clientX - rect.left) / rect.width;
-    this.cursorPos = Math.max(0, Math.min(1, x));
+    this.cursorPos = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    this.updateCursor();
+  }
+
+  moveCursorToTouch(e) {
+    const rect = this.canvas.getBoundingClientRect();
+    this.cursorPos = Math.max(0, Math.min(1, (e.touches[0].clientX - rect.left) / rect.width));
     this.updateCursor();
   }
 
@@ -184,12 +184,12 @@ class AudioTrimmer {
     return `${mins.toString().padStart(2, '0')}.${secs.toFixed(1).padStart(4, '0')}`;
   }
 
-  // 拖动处理
+  // ===== 拖动 =====
   startDrag(e, target) {
     e.preventDefault();
     this.isDragging = true;
     this.dragTarget = target;
-    this.dragStartX = e.clientX || e.touches[0].clientX;
+    this.dragStartX = e.clientX || (e.touches && e.touches[0] && e.touches[0].clientX);
     this.dragStartSelectStart = this.selectStart;
     this.dragStartSelectEnd = this.selectEnd;
     this.dragStartCursorPos = this.cursorPos;
@@ -198,7 +198,6 @@ class AudioTrimmer {
   onDrag(e) {
     if (!this.isDragging) return;
     e.preventDefault();
-
     const clientX = e.clientX || (e.touches && e.touches[0] && e.touches[0].clientX);
     if (clientX === undefined) return;
 
@@ -211,17 +210,16 @@ class AudioTrimmer {
       this.selectEnd = Math.min(1, Math.max(this.selectStart + 0.01, this.dragStartSelectEnd + delta));
     } else if (this.dragTarget === 'body') {
       const range = this.dragStartSelectEnd - this.dragStartSelectStart;
-      let newStart = this.dragStartSelectStart + delta;
-      if (newStart < 0) newStart = 0;
-      if (newStart + range > 1) newStart = 1 - range;
-      this.selectStart = newStart;
-      this.selectEnd = newStart + range;
+      let s = this.dragStartSelectStart + delta;
+      if (s < 0) s = 0;
+      if (s + range > 1) s = 1 - range;
+      this.selectStart = s;
+      this.selectEnd = s + range;
     } else if (this.dragTarget === 'cursor') {
       this.cursorPos = Math.max(0, Math.min(1, this.dragStartCursorPos + delta));
       this.updateCursor();
-      return; // 光标移动不需要更新选区
+      return;
     }
-
     this.updateSelection();
   }
 
@@ -230,84 +228,110 @@ class AudioTrimmer {
     this.dragTarget = null;
   }
 
-  // 切换播放/暂停
+  // ===== 播放控制 =====
   togglePlayPause() {
     if (this.isPlaying) {
-      this.stopPlayback();
+      this.pause();
     } else {
-      this.preview();
+      this.play();
     }
   }
 
-  // 更新播放/暂停按钮图标
   updatePlayPauseBtn() {
     this.playPauseBtn.textContent = this.isPlaying ? '⏸' : '▶';
   }
 
-  // 预览：从光标位置开始播放选区
-  preview() {
-    this.stopPlayback();
+  // 从光标位置开始播放
+  play() {
     if (!this.audioBuffer || !this.audioContext) return;
 
-    const duration = this.audioBuffer.duration;
-    const selStart = this.selectStart * duration;
-    const selEnd = this.selectEnd * duration;
+    // 如果已经是暂停状态，恢复播放
+    if (this.pauseTime !== undefined) {
+      this.sourceNode = this.audioContext.createBufferSource();
+      this.sourceNode.buffer = this.audioBuffer;
+      const remaining = this.playEndTime - this.pauseTime;
+      this.sourceNode.start(0, this.pauseTime, remaining);
+      this.sourceNode.connect(this.audioContext.destination);
+      this.playStartTime = this.audioContext.currentTime;
+      this.playStartPos = this.pauseTime;
+      this.playDuration = remaining;
+      this.isPlaying = true;
+      this.updatePlayPauseBtn();
+      this.animateCursor();
+      this.sourceNode.onended = () => this.onPlayEnd();
+      delete this.pauseTime;
+      return;
+    }
 
-    // 光标位置必须在选区内
-    let startPos = this.cursorPos * duration;
-    if (startPos < selStart) startPos = selStart;
-    if (startPos >= selEnd) startPos = selStart;
-
-    const playDuration = selEnd - startPos;
+    // 从光标位置开始播放
+    const dur = this.audioBuffer.duration;
+    let startPos = this.cursorPos * dur;
 
     this.sourceNode = this.audioContext.createBufferSource();
     this.sourceNode.buffer = this.audioBuffer;
-    this.sourceNode.start(0, startPos, playDuration);
+    this.sourceNode.start(0, startPos);
     this.sourceNode.connect(this.audioContext.destination);
 
-    this.isPlaying = true;
     this.playStartTime = this.audioContext.currentTime;
     this.playStartPos = startPos;
-    this.playDuration = playDuration;
+    this.playDuration = dur - startPos;
+    this.playEndTime = dur;
+    this.isPlaying = true;
     this.updatePlayPauseBtn();
     this.animateCursor();
 
-    this.sourceNode.onended = () => {
-      this.sourceNode = null;
-      this.isPlaying = false;
-      this.updatePlayPauseBtn();
-      cancelAnimationFrame(this.animFrame);
-      this.cursorPos = this.selectStart;
-      this.updateCursor();
-    };
+    this.sourceNode.onended = () => this.onPlayEnd();
   }
 
-  // 光标跟随播放进度移动
-  animateCursor() {
-    if (!this.isPlaying) return;
-
+  // 暂停（保留光标位置）
+  pause() {
+    if (this.sourceNode) {
+      try { this.sourceNode.stop(); } catch (e) {}
+      this.sourceNode = null;
+    }
+    // 记录暂停时的位置
     const elapsed = this.audioContext.currentTime - this.playStartTime;
-    const progress = elapsed / this.playDuration;
-    this.cursorPos = this.selectStart + progress * (this.selectEnd - this.selectStart);
+    this.pauseTime = this.playStartPos + elapsed;
+    this.cursorPos = this.pauseTime / this.audioBuffer.duration;
     this.updateCursor();
 
-    if (progress < 1) {
-      this.animFrame = requestAnimationFrame(() => this.animateCursor());
-    }
+    this.isPlaying = false;
+    cancelAnimationFrame(this.animFrame);
+    this.updatePlayPauseBtn();
   }
 
-  // 停止播放
+  onPlayEnd() {
+    this.sourceNode = null;
+    this.isPlaying = false;
+    delete this.pauseTime;
+    cancelAnimationFrame(this.animFrame);
+    this.updatePlayPauseBtn();
+    // 光标停在结束位置，不回弹
+  }
+
   stopPlayback() {
     if (this.sourceNode) {
       try { this.sourceNode.stop(); } catch (e) {}
       this.sourceNode = null;
     }
     this.isPlaying = false;
+    delete this.pauseTime;
     cancelAnimationFrame(this.animFrame);
     this.updatePlayPauseBtn();
   }
 
-  // 保存剪辑结果
+  // 光标跟随播放进度
+  animateCursor() {
+    if (!this.isPlaying) return;
+    const elapsed = this.audioContext.currentTime - this.playStartTime;
+    const progress = elapsed / this.playDuration;
+    if (progress >= 1) return;
+    this.cursorPos = this.playStartPos / this.audioBuffer.duration + progress * (this.playDuration / this.audioBuffer.duration);
+    this.updateCursor();
+    this.animFrame = requestAnimationFrame(() => this.animateCursor());
+  }
+
+  // ===== 保存 =====
   async save() {
     if (!this.audioBuffer || !this.currentSong) return;
     this.stopPlayback();
@@ -315,98 +339,68 @@ class AudioTrimmer {
     this.saveBtn.disabled = true;
 
     try {
-      const startTime = Math.floor(this.selectStart * this.audioBuffer.duration * this.audioBuffer.sampleRate);
-      const endTime = Math.floor(this.selectEnd * this.audioBuffer.duration * this.audioBuffer.sampleRate);
-      const length = endTime - startTime;
+      const sr = this.audioBuffer.sampleRate;
+      const startSample = Math.floor(this.selectStart * this.audioBuffer.duration * sr);
+      const endSample = Math.floor(this.selectEnd * this.audioBuffer.duration * sr);
+      const length = endSample - startSample;
 
-      const newBuffer = this.audioContext.createBuffer(
-        this.audioBuffer.numberOfChannels,
-        length,
-        this.audioBuffer.sampleRate
-      );
-
+      const newBuffer = this.audioContext.createBuffer(this.audioBuffer.numberOfChannels, length, sr);
       for (let ch = 0; ch < this.audioBuffer.numberOfChannels; ch++) {
-        const oldData = this.audioBuffer.getChannelData(ch);
-        const newData = newBuffer.getChannelData(ch);
-        for (let i = 0; i < length; i++) {
-          newData[i] = oldData[startTime + i];
-        }
+        const old = this.audioBuffer.getChannelData(ch);
+        const nw = newBuffer.getChannelData(ch);
+        for (let i = 0; i < length; i++) nw[i] = old[startSample + i];
       }
 
-      this.statusEl.textContent = '编码为 WAV...';
+      this.statusEl.textContent = '编码中...';
       const wavBlob = this.audioBufferToWav(newBuffer);
 
-      this.statusEl.textContent = '上传到服务器...';
+      this.statusEl.textContent = '上传中...';
       const formData = new FormData();
       formData.append('file', wavBlob, this.currentSong.filename);
 
-      const uploadRes = await fetch(`/api/songs/${this.currentSong.id}/replace`, {
-        method: 'POST',
-        body: formData
-      });
+      const res = await fetch(`/api/songs/${this.currentSong.id}/replace`, { method: 'POST', body: formData });
 
-      if (uploadRes.ok) {
+      if (res.ok) {
         this.statusEl.textContent = '保存成功！';
         setTimeout(() => this.close(), 1000);
-        if (window.player) {
-          await window.player.loadAllSongs();
-        }
+        if (window.player) await window.player.loadAllSongs();
       } else {
-        const err = await uploadRes.json();
+        const err = await res.json();
         this.statusEl.textContent = '保存失败：' + (err.error || '未知错误');
       }
     } catch (err) {
       this.statusEl.textContent = '处理失败：' + err.message;
     }
-
     this.saveBtn.disabled = false;
   }
 
-  // AudioBuffer 转 WAV Blob
+  // AudioBuffer 转 WAV
   audioBufferToWav(buffer) {
-    const numChannels = buffer.numberOfChannels;
-    const sampleRate = buffer.sampleRate;
-    const format = 1;
-    const bitDepth = 16;
+    const numCh = buffer.numberOfChannels;
+    const sr = buffer.sampleRate;
+    const len = buffer.length * numCh * 2 + 44;
+    const out = new ArrayBuffer(len);
+    const v = new DataView(out);
 
-    let length = buffer.length * numChannels * 2 + 44;
-    const output = new ArrayBuffer(length);
-    const view = new DataView(output);
+    const w = (p, s) => { for (let i = 0; i < s.length; i++) v.setUint8(p + i, s.charCodeAt(i)); };
+    w(0, 'RIFF'); v.setUint32(4, len - 8, true); w(8, 'WAVE');
+    w(12, 'fmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true);
+    v.setUint16(22, numCh, true); v.setUint32(24, sr, true);
+    v.setUint32(28, sr * numCh * 2, true); v.setUint16(32, numCh * 2, true); v.setUint16(34, 16, true);
+    w(36, 'data'); v.setUint32(40, len - 44, true);
 
-    this.writeString(view, 0, 'RIFF');
-    view.setUint32(4, length - 8, true);
-    this.writeString(view, 8, 'WAVE');
-    this.writeString(view, 12, 'fmt ');
-    view.setUint32(16, 16, true);
-    view.setUint16(20, format, true);
-    view.setUint16(22, numChannels, true);
-    view.setUint32(24, sampleRate, true);
-    view.setUint32(28, sampleRate * numChannels * 2, true);
-    view.setUint16(32, numChannels * 2, true);
-    view.setUint16(34, bitDepth, true);
-    this.writeString(view, 36, 'data');
-    view.setUint32(40, length - 44, true);
-
-    let offset = 44;
+    let off = 44;
     for (let i = 0; i < buffer.length; i++) {
-      for (let ch = 0; ch < numChannels; ch++) {
-        const sample = Math.max(-1, Math.min(1, buffer.getChannelData(ch)[i]));
-        view.setInt16(offset, sample < 0 ? sample * 0x8000 : sample * 0x7FFF, true);
-        offset += 2;
+      for (let ch = 0; ch < numCh; ch++) {
+        const s = Math.max(-1, Math.min(1, buffer.getChannelData(ch)[i]));
+        v.setInt16(off, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+        off += 2;
       }
     }
-
-    return new Blob([output], { type: 'audio/wav' });
-  }
-
-  writeString(view, offset, string) {
-    for (let i = 0; i < string.length; i++) {
-      view.setUint8(offset + i, string.charCodeAt(i));
-    }
+    return new Blob([out], { type: 'audio/wav' });
   }
 }
 
-// 全局实例
 window.audioTrimmer = null;
 document.addEventListener('DOMContentLoaded', () => {
   window.audioTrimmer = new AudioTrimmer();
