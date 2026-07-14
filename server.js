@@ -471,7 +471,15 @@ app.post('/api/songs/:id/replace', upload.single('file'), (req, res) => {
   // 更新文件大小
   const stats = fs.statSync(newPath);
   song.size = stats.size;
+
+  // 更新时长（用 ffprobe 或简单估算）
+  // WAV格式：时长 = (文件大小 - 44) / (采样率 * 声道数 * 2)
+  // 但更准确的方式是用音频库，这里用简单方法
+  song.duration = null; // 清空旧时长，前端会重新获取
+
   saveDB(songs);
+
+  console.log(`[剪辑] 歌曲 ${song.title} 已替换，新文件大小: ${stats.size} bytes`);
 
   res.json({ success: true, filename: song.filename });
 });
