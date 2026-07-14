@@ -523,16 +523,27 @@ class MusicPlayer {
     this.songArtist.textContent = song.original_name;
     this.renderList(document.getElementById('searchInput').value);
 
-    // 恢复播放位置
-    this.audio.addEventListener('loadedmetadata', () => {
-      if (state.currentTime > 0) {
+    // 恢复播放位置（多个事件都尝试）
+    const restoreTime = () => {
+      if (state.currentTime > 0 && this.audio.readyState >= 1) {
         this.audio.currentTime = state.currentTime;
+        this.updateProgress();
       }
-    }, { once: true });
+    };
+    this.audio.addEventListener('loadedmetadata', restoreTime, { once: true });
+    this.audio.addEventListener('canplay', restoreTime, { once: true });
+    // 如果音频已经加载好了
+    if (this.audio.readyState >= 1) restoreTime();
 
     // 定期保存状态
     this.audio.addEventListener('timeupdate', () => {
       if (this.isPlaying) this.saveState();
+    });
+
+    // 页面关闭/切后台时保存状态
+    window.addEventListener('beforeunload', () => this.saveState());
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) this.saveState();
     });
   }
 
