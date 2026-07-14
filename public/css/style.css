@@ -19,10 +19,11 @@
    ├── 8.  底部播放栏样式（进度条、控制按钮、音量）
    ├── 9.  上传弹窗样式（进度条、状态文字）
    ├── 10. 歌词面板样式（歌词行、高亮、滚动）
-   └── 11. 手机端遮罩和菜单按钮（默认隐藏，手机端显示）
+   ├── 11. 剪辑弹窗样式（波形、选区、控制按钮）
+   └── 12. 手机端遮罩和菜单按钮（默认隐藏，手机端显示）
 
    【手机端样式】（屏幕 ≤ 768px 时覆盖电脑端样式）
-   └── 12. 响应式布局（手机端适配）
+   └── 13. 响应式布局（手机端适配）
 
    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 */
@@ -1107,7 +1108,206 @@ body {
 }
 
 /* #endregion */
-/* #region 11. 手机端遮罩和菜单按钮 */
+/* #region 11. 剪辑弹窗 */
+/* ==================== 11. 剪辑弹窗 ==================== */
+
+/* 11.1 剪辑弹窗遮罩 */
+.trim-modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.8);
+  z-index: 300;
+  justify-content: center;
+  align-items: center;
+}
+
+.trim-modal.visible {
+  display: flex;
+}
+
+/* 11.2 剪辑弹窗内容 */
+.trim-modal-content {
+  background: #1a1a2e;
+  border-radius: 16px;
+  padding: 24px;
+  width: 90%;
+  max-width: 650px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+}
+
+/* 11.3 剪辑头部 */
+.trim-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.trim-header h3 {
+  margin: 0;
+  font-size: 18px;
+  color: var(--text);
+}
+
+.trim-close {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  font-size: 20px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.trim-close:hover {
+  background: rgba(255,255,255,0.1);
+}
+
+/* 11.4 波形区域 */
+.trim-waveform {
+  position: relative;
+  background: #1a1a2e;
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 16px;
+  cursor: crosshair;
+}
+
+.trim-waveform canvas {
+  display: block;
+  width: 100%;
+  height: 100px;
+}
+
+/* 11.5 选区 */
+.trim-selection {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  background: rgba(78, 205, 196, 0.2);
+  border-left: 2px solid #4ecdc4;
+  border-right: 2px solid #4ecdc4;
+  cursor: move;
+}
+
+/* 11.6 拖动手柄 */
+.trim-handle {
+  position: absolute;
+  top: 0;
+  width: 12px;
+  height: 100%;
+  cursor: ew-resize;
+  z-index: 10;
+}
+
+.trim-handle::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 30px;
+  background: #4ecdc4;
+  border-radius: 2px;
+}
+
+.trim-handle-left {
+  left: -6px;
+}
+
+.trim-handle-left::after {
+  left: 4px;
+}
+
+.trim-handle-right {
+  right: -6px;
+}
+
+.trim-handle-right::after {
+  right: 4px;
+}
+
+/* 11.7 时间显示 */
+.trim-times {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.trim-time-group {
+  flex: 1;
+  text-align: center;
+}
+
+.trim-time-group label {
+  display: block;
+  font-size: 12px;
+  color: var(--text-dim);
+  margin-bottom: 4px;
+}
+
+.trim-time-group input {
+  width: 100%;
+  padding: 8px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 14px;
+  text-align: center;
+  font-family: monospace;
+}
+
+/* 11.8 控制按钮 */
+.trim-controls {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  margin-bottom: 12px;
+}
+
+.trim-btn {
+  padding: 10px 20px;
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 8px;
+  background: rgba(255,255,255,0.05);
+  color: var(--text);
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.trim-btn:hover {
+  background: rgba(255,255,255,0.1);
+}
+
+.trim-btn-primary {
+  background: #4ecdc4;
+  color: #0a0a0a;
+  border-color: #4ecdc4;
+}
+
+.trim-btn-primary:hover {
+  background: #45b7aa;
+}
+
+.trim-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* 11.9 状态提示 */
+.trim-status {
+  text-align: center;
+  font-size: 13px;
+  color: var(--text-dim);
+  min-height: 20px;
+}
+
+/* #endregion */
+/* #region 12. 手机端遮罩和菜单按钮 */
 /* ==================== 11. 手机端遮罩和菜单按钮 ==================== */
 
 /* 11.1 手机端遮罩层（点击关闭侧边栏） */
@@ -1141,7 +1341,7 @@ body {
 }
 
 /* #endregion */
-/* #region 12. 响应式布局（手机端适配） */
+/* #region 13. 响应式布局（手机端适配） */
 /* ==================== 12. 响应式布局（手机端适配） ==================== */
 /* 当屏幕宽度≤768px时，应用手机端样式 */
 

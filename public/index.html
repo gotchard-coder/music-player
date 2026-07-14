@@ -226,7 +226,8 @@
   <script src="js/lyrics-extract.js"></script> <!-- 歌词提取：从音频文件提取内嵌歌词 -->
   <script src="js/lyrics.js"></script>        <!-- 歌词显示：解析 LRC 格式、同步滚动 -->
   <script src="js/playlist.js?v=7"></script>  <!-- 歌单管理：创建、删除、添加歌曲 -->
-  <script src="js/app.js?v=7"></script>       <!-- 主入口：初始化应用、绑定事件（必须最后加载） -->
+  <script src="js/trim.js?v=1"></script>      <!-- 音频剪辑：裁剪歌曲片段 -->
+  <script src="js/app.js?v=8"></script>       <!-- 主入口：初始化应用、绑定事件（必须最后加载） -->
 
   <!-- ========== 右键菜单（默认隐藏） ========== -->
 
@@ -234,6 +235,7 @@
   <div class="context-menu" id="contextMenu">
     <div class="context-menu-item" data-action="rename">重命名</div>  <!-- 重命名歌曲 -->
     <div class="context-menu-item" data-action="add-to-playlist">添加到歌单</div>  <!-- 添加到歌单（有子菜单） -->
+    <div class="context-menu-item" data-action="trim">剪辑</div>  <!-- 剪辑音频 -->
     <div class="context-menu-item" data-action="delete">删除</div>  <!-- 删除歌曲 -->
   </div>
 
@@ -247,6 +249,47 @@
   <div class="context-menu" id="playlistContextMenu">
     <div class="context-menu-item" data-action="rename-playlist">重命名</div>  <!-- 重命名歌单 -->
     <div class="context-menu-item" action="delete-playlist">删除</div>  <!-- 删除歌单 -->
+  </div>
+
+  <!-- ========== 剪辑弹窗 ========== -->
+  <div class="trim-modal" id="trimModal">
+    <div class="trim-modal-content">
+      <div class="trim-header">
+        <h3 id="trimSongName">剪辑歌曲</h3>
+        <button class="trim-close" id="trimClose">✕</button>
+      </div>
+      <!-- 波形/进度条区域 -->
+      <div class="trim-waveform" id="trimWaveform">
+        <canvas id="trimCanvas" width="600" height="100"></canvas>
+        <!-- 选区遮罩 -->
+        <div class="trim-selection" id="trimSelection">
+          <div class="trim-handle trim-handle-left" id="trimHandleLeft"></div>
+          <div class="trim-handle trim-handle-right" id="trimHandleRight"></div>
+        </div>
+      </div>
+      <!-- 时间显示 -->
+      <div class="trim-times">
+        <div class="trim-time-group">
+          <label>开始</label>
+          <input type="text" id="trimStart" value="00:00.0" readonly>
+        </div>
+        <div class="trim-time-group">
+          <label>保留时长</label>
+          <input type="text" id="trimDuration" value="00:00.0" readonly>
+        </div>
+        <div class="trim-time-group">
+          <label>结束</label>
+          <input type="text" id="trimEnd" value="00:00.0" readonly>
+        </div>
+      </div>
+      <!-- 控制按钮 -->
+      <div class="trim-controls">
+        <button class="trim-btn" id="trimPreview">▶ 预览</button>
+        <button class="trim-btn" id="trimStop">■ 停止</button>
+        <button class="trim-btn trim-btn-primary" id="trimSave">💾 保存</button>
+      </div>
+      <div class="trim-status" id="trimStatus"></div>
+    </div>
   </div>
 </body>  <!-- body 结束 -->
 </html>  <!-- HTML 文档结束 -->

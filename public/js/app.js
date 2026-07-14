@@ -168,6 +168,11 @@ document.addEventListener('DOMContentLoaded', async () => {
       } else if (action === 'add-to-playlist') {
         // 添加到歌单：显示歌单列表子菜单
         showAddToPlaylistMenu(songId, contextMenu);
+      } else if (action === 'trim') {
+        // 剪辑歌曲
+        if (window.audioTrimmer && song) {
+          window.audioTrimmer.open(song);
+        }
       } else if (action === 'delete') {
         // 删除歌曲：全部歌曲中删除=真正删除；歌单中删除=仅从该歌单移除
         if (playlistManager.currentPlaylistId === null) {

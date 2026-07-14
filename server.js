@@ -443,6 +443,45 @@ app.delete('/api/songs/:id', (req, res) => {
   res.json({ success: true });
 });
 
+// API: 替换歌曲音频文件（用于剪辑后保存）
+// POST /api/songs/:id/replace
+app.post('/api/songs/:id/replace', (req, res) => {
+  const songs = loadDB();
+  const id = parseInt(req.params.id);
+  const song = songs.find(s => s.id === id);
+
+  if (!song) {
+    return res.status(404).json({ error: '歌曲不存在' });
+  }
+
+  // 获取上传的文件
+  if (!req.files || !req.files.file) {
+    return res.status(400).json({ error: '没有上传文件' });
+  }
+
+  const uploadedFile = req.files.file;
+
+  // 删除旧文件
+  const oldPath = path.join(uploadDir, song.filename);
+  if (fs.existsSync(oldPath)) {
+    fs.unlinkSync(oldPath);
+  }
+
+  // 保存新文件（保持原文件名）
+  uploadedFile.mv(path.join(uploadDir, song.filename), (err) => {
+    if (err) {
+      return res.status(500).json({ error: '保存文件失败' });
+    }
+
+    // 更新文件大小
+    const stats = fs.statSync(path.join(uploadDir, song.filename));
+    song.size = stats.size;
+    saveDB(songs);
+
+    res.json({ success: true, filename: song.filename });
+  });
+});
+
 // ==================== 歌单 API ====================
 
 // API: 获取所有歌单
