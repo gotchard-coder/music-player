@@ -12,6 +12,8 @@ class AudioTrimmer {
     this.startInput = document.getElementById('trimStart');
     this.endInput = document.getElementById('trimEnd');
     this.durationInput = document.getElementById('trimDuration');
+    this.playPauseBtn = document.getElementById('trimPlayPause');
+    this.saveBtn = document.getElementById('trimSave');
     this.statusEl = document.getElementById('trimStatus');
     this.songNameEl = document.getElementById('trimSongName');
 
@@ -19,12 +21,13 @@ class AudioTrimmer {
     this.audioBuffer = null;
     this.sourceNode = null;
     this.currentSong = null;
+    this.isPlaying = false;
 
     // 选区状态（百分比 0-1）
     this.selectStart = 0;
     this.selectEnd = 1;
     this.isDragging = false;
-    this.dragTarget = null; // 'left' | 'right' | 'body'
+    this.dragTarget = null;
 
     this.init();
   }
@@ -56,10 +59,10 @@ class AudioTrimmer {
     document.addEventListener('touchmove', (e) => this.onDrag(e));
     document.addEventListener('touchend', () => this.stopDrag());
 
-    // 按钮
-    document.getElementById('trimPreview').addEventListener('click', () => this.preview());
-    document.getElementById('trimStop').addEventListener('click', () => this.stopPreview());
-    document.getElementById('trimSave').addEventListener('click', () => this.save());
+    // 播放/暂停按钮
+    this.playPauseBtn.addEventListener('click', () => this.togglePlayPause());
+    // 保存按钮
+    this.saveBtn.addEventListener('click', () => this.save());
   }
 
   // 打开剪辑面板
@@ -68,7 +71,7 @@ class AudioTrimmer {
     this.songNameEl.textContent = '剪辑：' + song.title;
     this.modal.classList.add('visible');
     this.statusEl.textContent = '加载音频中...';
-    this.stopPreview();
+    this.stopPlayback();
 
     try {
       // 初始化 AudioContext
@@ -88,6 +91,7 @@ class AudioTrimmer {
       this.selectStart = 0;
       this.selectEnd = 1;
       this.updateSelection();
+      this.updatePlayPauseBtn();
       this.statusEl.textContent = '拖动白色区域选择保留的片段';
     } catch (err) {
       this.statusEl.textContent = '加载失败：' + err.message;
@@ -96,10 +100,12 @@ class AudioTrimmer {
 
   // 关闭剪辑面板
   close() {
-    this.stopPreview();
+    this.stopPlayback();
     this.modal.classList.remove('visible');
     this.audioBuffer = null;
     this.currentSong = null;
+    this.isPlaying = false;
+    this.updatePlayPauseBtn();
   }
 
   // 绘制波形
@@ -109,14 +115,13 @@ class AudioTrimmer {
 
     const width = this.canvas.width;
     const height = this.canvas.height;
-    const data = buffer.getChannelData(0); // 取第一个声道
+    const data = buffer.getChannelData(0);
     const step = Math.ceil(data.length / width);
 
     this.ctx.clearRect(0, 0, width, height);
     this.ctx.fillStyle = '#1a1a2e';
     this.ctx.fillRect(0, 0, width, height);
 
-    // 画波形
     this.ctx.beginPath();
     this.ctx.strokeStyle = '#4ecdc4';
     this.ctx.lineWidth = 1;
@@ -144,7 +149,6 @@ class AudioTrimmer {
     this.selection.style.left = left + '%';
     this.selection.style.width = width + '%';
 
-    // 更新时间显示
     const duration = this.audioBuffer.duration;
     const startTime = this.selectStart * duration;
     const endTime = this.selectEnd * duration;
@@ -200,9 +204,23 @@ class AudioTrimmer {
     this.dragTarget = null;
   }
 
+  // 切换播放/暂停
+  togglePlayPause() {
+    if (this.isPlaying) {
+      this.stopPlayback();
+    } else {
+      this.preview();
+    }
+  }
+
+  // 更新播放/暂停按钮图标
+  updatePlayPauseBtn() {
+    this.playPauseBtn.textContent = this.isPlaying ? '⏸' : '▶';
+  }
+
   // 预览选区
   preview() {
-    this.stopPreview();
+    this.stopPlayback();
     if (!this.audioBuffer || !this.audioContext) return;
 
     const startTime = this.selectStart * this.audioBuffer.duration;
@@ -211,43 +229,47 @@ class AudioTrimmer {
 
     this.sourceNode = this.audioContext.createBufferSource();
     this.sourceNode.buffer = this.audioBuffer;
-
-    // 创建一个只播放选区的调度
     this.sourceNode.start(0, startTime, duration);
     this.sourceNode.connect(this.audioContext.destination);
 
+    this.isPlaying = true;
+    this.updatePlayPauseBtn();
+
     this.sourceNode.onended = () => {
       this.sourceNode = null;
+      this.isPlaying = false;
+      this.updatePlayPauseBtn();
     };
   }
 
-  // 停止预览
-  stopPreview() {
+  // 停止播放
+  stopPlayback() {
     if (this.sourceNode) {
       try { this.sourceNode.stop(); } catch (e) {}
       this.sourceNode = null;
     }
+    this.isPlaying = false;
+    this.updatePlayPauseBtn();
   }
 
   // 保存剪辑结果
   async save() {
     if (!this.audioBuffer || !this.currentSong) return;
+    this.stopPlayback();
     this.statusEl.textContent = '处理中...';
-    document.getElementById('trimSave').disabled = true;
+    this.saveBtn.disabled = true;
 
     try {
       const startTime = Math.floor(this.selectStart * this.audioBuffer.duration * this.audioBuffer.sampleRate);
       const endTime = Math.floor(this.selectEnd * this.audioBuffer.duration * this.audioBuffer.sampleRate);
       const length = endTime - startTime;
 
-      // 创建新的 AudioBuffer
       const newBuffer = this.audioContext.createBuffer(
         this.audioBuffer.numberOfChannels,
         length,
         this.audioBuffer.sampleRate
       );
 
-      // 复制数据
       for (let ch = 0; ch < this.audioBuffer.numberOfChannels; ch++) {
         const oldData = this.audioBuffer.getChannelData(ch);
         const newData = newBuffer.getChannelData(ch);
@@ -256,23 +278,13 @@ class AudioTrimmer {
         }
       }
 
-      // 编码为 WAV
       this.statusEl.textContent = '编码为 WAV...';
       const wavBlob = this.audioBufferToWav(newBuffer);
 
-      // 上传到服务器
       this.statusEl.textContent = '上传到服务器...';
       const formData = new FormData();
       formData.append('file', wavBlob, this.currentSong.filename);
 
-      // 先删除旧文件，再上传新文件
-      const res = await fetch(`/api/songs/${this.currentSong.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ trim: true })
-      });
-
-      // 上传新的音频文件
       const uploadRes = await fetch(`/api/songs/${this.currentSong.id}/replace`, {
         method: 'POST',
         body: formData
@@ -281,7 +293,6 @@ class AudioTrimmer {
       if (uploadRes.ok) {
         this.statusEl.textContent = '保存成功！';
         setTimeout(() => this.close(), 1000);
-        // 刷新歌曲列表
         if (window.player) {
           await window.player.loadAllSongs();
         }
@@ -293,21 +304,20 @@ class AudioTrimmer {
       this.statusEl.textContent = '处理失败：' + err.message;
     }
 
-    document.getElementById('trimSave').disabled = false;
+    this.saveBtn.disabled = false;
   }
 
   // AudioBuffer 转 WAV Blob
   audioBufferToWav(buffer) {
     const numChannels = buffer.numberOfChannels;
     const sampleRate = buffer.sampleRate;
-    const format = 1; // PCM
+    const format = 1;
     const bitDepth = 16;
 
     let length = buffer.length * numChannels * 2 + 44;
     const output = new ArrayBuffer(length);
     const view = new DataView(output);
 
-    // WAV 头
     this.writeString(view, 0, 'RIFF');
     view.setUint32(4, length - 8, true);
     this.writeString(view, 8, 'WAVE');
@@ -322,7 +332,6 @@ class AudioTrimmer {
     this.writeString(view, 36, 'data');
     view.setUint32(40, length - 44, true);
 
-    // 写入音频数据
     let offset = 44;
     for (let i = 0; i < buffer.length; i++) {
       for (let ch = 0; ch < numChannels; ch++) {

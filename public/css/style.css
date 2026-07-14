@@ -1293,6 +1293,17 @@ body {
   background: #45b7aa;
 }
 
+/* 11.8.1 播放/暂停按钮（圆形） */
+.trim-btn-play {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .trim-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
