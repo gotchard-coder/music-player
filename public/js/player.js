@@ -726,7 +726,6 @@ class MusicPlayer {
 
   // 删除歌曲
   async deleteSong(id) {
-    if (!confirm('确定删除这首歌曲？')) return;
     try {
       const res = await fetch(`/api/songs/${id}`, { method: 'DELETE' });
       if (res.ok) {
@@ -745,11 +744,9 @@ class MusicPlayer {
         // 如果删除的是正在播放的歌曲，无缝切换到下一首
         if (isPlaying) {
           if (this.songs.length > 0) {
-            // 索引已经自动指向下一首（因为当前歌曲被移除了）
             if (this.currentIndex >= this.songs.length) {
-              this.currentIndex = 0; // 最后一首则回到第一首
+              this.currentIndex = 0;
             }
-            // 直接设置音频源并播放，不停顿
             const nextSong = this.songs[this.currentIndex];
             this.audio.src = `/api/stream/${nextSong.id}`;
             this.songTitle.textContent = nextSong.title;
@@ -757,7 +754,6 @@ class MusicPlayer {
             this.updateMediaSession(nextSong);
             this.audio.play().catch(() => this.scheduleResume());
           } else {
-            // 没有歌曲了
             this.currentIndex = -1;
             this.audio.pause();
             this.audio.src = '';
@@ -768,7 +764,6 @@ class MusicPlayer {
             this.currentTimeEl.textContent = '00:00';
           }
         } else if (this.currentIndex >= 0) {
-          // 删除的不是当前歌曲，更新索引
           const currentId = this.songs[this.currentIndex] ? this.songs[this.currentIndex].id : null;
           if (currentId) {
             const newIndex = this.songs.findIndex(s => s.id === currentId);
