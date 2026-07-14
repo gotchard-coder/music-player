@@ -445,7 +445,7 @@ app.delete('/api/songs/:id', (req, res) => {
 
 // API: 替换歌曲音频文件（用于剪辑后保存）
 // POST /api/songs/:id/replace
-app.post('/api/songs/:id/replace', (req, res) => {
+app.post('/api/songs/:id/replace', upload.single('file'), (req, res) => {
   const songs = loadDB();
   const id = parseInt(req.params.id);
   const song = songs.find(s => s.id === id);
@@ -454,12 +454,9 @@ app.post('/api/songs/:id/replace', (req, res) => {
     return res.status(404).json({ error: '歌曲不存在' });
   }
 
-  // 获取上传的文件
-  if (!req.files || !req.files.file) {
+  if (!req.file) {
     return res.status(400).json({ error: '没有上传文件' });
   }
-
-  const uploadedFile = req.files.file;
 
   // 删除旧文件
   const oldPath = path.join(uploadDir, song.filename);
@@ -467,19 +464,16 @@ app.post('/api/songs/:id/replace', (req, res) => {
     fs.unlinkSync(oldPath);
   }
 
-  // 保存新文件（保持原文件名）
-  uploadedFile.mv(path.join(uploadDir, song.filename), (err) => {
-    if (err) {
-      return res.status(500).json({ error: '保存文件失败' });
-    }
+  // multer 已经把文件存到了 req.file.path，移动到目标位置
+  const newPath = path.join(uploadDir, song.filename);
+  fs.renameSync(req.file.path, newPath);
 
-    // 更新文件大小
-    const stats = fs.statSync(path.join(uploadDir, song.filename));
-    song.size = stats.size;
-    saveDB(songs);
+  // 更新文件大小
+  const stats = fs.statSync(newPath);
+  song.size = stats.size;
+  saveDB(songs);
 
-    res.json({ success: true, filename: song.filename });
-  });
+  res.json({ success: true, filename: song.filename });
 });
 
 // ==================== 歌单 API ====================
