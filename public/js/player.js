@@ -730,19 +730,47 @@ class MusicPlayer {
     try {
       const res = await fetch(`/api/songs/${id}`, { method: 'DELETE' });
       if (res.ok) {
+        // 检查是否正在播放这首歌曲
+        const isPlaying = this.currentIndex >= 0 && this.songs[this.currentIndex] && this.songs[this.currentIndex].id === id;
+
         // 从列表中移除
         this.songs = this.songs.filter(s => s.id !== id);
         this.allSongs = this.allSongs.filter(s => s.id !== id);
+
+        // 如果删除的是正在播放的歌曲，停掉并切换到下一首
+        if (isPlaying) {
+          this.audio.pause();
+          this.audio.src = '';
+          if (this.songs.length > 0) {
+            // 从当前位置继续（因为歌曲已移除，当前位置变成下一首）
+            if (this.currentIndex >= this.songs.length) {
+              this.currentIndex = 0; // 如果是最后一首，回到第一首
+            }
+            await this.loadSong(this.currentIndex);
+          } else {
+            // 没有歌曲了，重置播放器
+            this.currentIndex = -1;
+            this.songTitle.textContent = '未选择歌曲';
+            this.songArtist.textContent = '';
+            this.songCover.src = '';
+            this.durationEl.textContent = '00:00';
+            this.currentTimeEl.textContent = '00:00';
+          }
+        } else if (this.currentIndex >= 0) {
+          // 删除的不是当前歌曲，但需要更新索引
+          const currentId = this.songs[this.currentIndex] ? this.songs[this.currentIndex].id : null;
+          if (currentId) {
+            // 找到当前歌曲在新列表中的位置
+            const newIndex = this.songs.findIndex(s => s.id === currentId);
+            if (newIndex !== -1) {
+              this.currentIndex = newIndex;
+            }
+          }
+        }
+
         // 更新歌曲数量显示
         const countEl = document.getElementById('songCount');
         if (countEl) countEl.textContent = this.songs.length + ' 首';
-        // 如果没有歌曲了，重置播放器
-        if (this.songs.length === 0) {
-          this.currentIndex = -1;
-          this.audio.src = '';
-          this.songTitle.textContent = '未选择歌曲';
-          this.songArtist.textContent = '';
-        }
         this.renderList(document.getElementById('searchInput').value);
         // 刷新歌单列表
         if (window.playlistManager) {
