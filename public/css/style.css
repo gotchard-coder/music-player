@@ -1180,7 +1180,30 @@ body {
   height: 100px;
 }
 
-/* 11.5 选区 */
+/* 11.5 播放光标 */
+.trim-cursor {
+  position: absolute;
+  top: 0;
+  width: 2px;
+  height: 100%;
+  background: #ff6b6b;
+  cursor: ew-resize;
+  z-index: 20;
+  pointer-events: auto;
+}
+
+.trim-cursor::before {
+  content: '';
+  position: absolute;
+  top: -4px;
+  left: -5px;
+  width: 12px;
+  height: 12px;
+  background: #ff6b6b;
+  border-radius: 50%;
+}
+
+/* 11.6 选区 */
 .trim-selection {
   position: absolute;
   top: 0;
@@ -1191,7 +1214,7 @@ body {
   cursor: move;
 }
 
-/* 11.6 拖动手柄 */
+/* 11.7 拖动手柄 */
 .trim-handle {
   position: absolute;
   top: 0;
@@ -1228,7 +1251,7 @@ body {
   right: 4px;
 }
 
-/* 11.7 时间显示 */
+/* 11.8 时间显示 */
 .trim-times {
   display: flex;
   justify-content: space-between;
@@ -1260,7 +1283,7 @@ body {
   font-family: monospace;
 }
 
-/* 11.8 控制按钮 */
+/* 11.9 控制按钮 */
 .trim-controls {
   display: flex;
   gap: 12px;
@@ -1293,7 +1316,7 @@ body {
   background: #45b7aa;
 }
 
-/* 11.8.1 播放/暂停按钮（圆形） */
+/* 11.9.1 播放/暂停按钮（圆形） */
 .trim-btn-play {
   width: 48px;
   height: 48px;
@@ -1309,7 +1332,7 @@ body {
   cursor: not-allowed;
 }
 
-/* 11.9 状态提示 */
+/* 11.10 状态提示 */
 .trim-status {
   text-align: center;
   font-size: 13px;

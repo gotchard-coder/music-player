@@ -9,6 +9,7 @@ class AudioTrimmer {
     this.selection = document.getElementById('trimSelection');
     this.handleLeft = document.getElementById('trimHandleLeft');
     this.handleRight = document.getElementById('trimHandleRight');
+    this.cursor = document.getElementById('trimCursor');
     this.startInput = document.getElementById('trimStart');
     this.endInput = document.getElementById('trimEnd');
     this.durationInput = document.getElementById('trimDuration');
@@ -22,6 +23,8 @@ class AudioTrimmer {
     this.sourceNode = null;
     this.currentSong = null;
     this.isPlaying = false;
+    this.cursorPos = 0; // 光标位置 0-1
+    this.animFrame = null;
 
     // 选区状态（百分比 0-1）
     this.selectStart = 0;
@@ -47,6 +50,12 @@ class AudioTrimmer {
     this.selection.addEventListener('mousedown', (e) => {
       if (e.target === this.selection) this.startDrag(e, 'body');
     });
+
+    // 拖动光标
+    this.cursor.addEventListener('mousedown', (e) => this.startDrag(e, 'cursor'));
+    // 点击波形区域移动光标
+    this.canvas.addEventListener('click', (e) => this.moveCursorTo(e));
+
     document.addEventListener('mousemove', (e) => this.onDrag(e));
     document.addEventListener('mouseup', () => this.stopDrag());
 
@@ -56,6 +65,7 @@ class AudioTrimmer {
     this.selection.addEventListener('touchstart', (e) => {
       if (e.target === this.selection) this.startDrag(e, 'body');
     });
+    this.cursor.addEventListener('touchstart', (e) => this.startDrag(e, 'cursor'));
     document.addEventListener('touchmove', (e) => this.onDrag(e));
     document.addEventListener('touchend', () => this.stopDrag());
 
@@ -74,25 +84,23 @@ class AudioTrimmer {
     this.stopPlayback();
 
     try {
-      // 初始化 AudioContext
       if (!this.audioContext) {
         this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
       }
 
-      // 获取音频数据
       const res = await fetch(`/api/stream/${song.id}`);
       const arrayBuffer = await res.arrayBuffer();
       this.audioBuffer = await this.audioContext.decodeAudioData(arrayBuffer);
 
-      // 绘制波形
       this.drawWaveform();
 
-      // 重置选区为全部
       this.selectStart = 0;
       this.selectEnd = 1;
+      this.cursorPos = 0;
       this.updateSelection();
+      this.updateCursor();
       this.updatePlayPauseBtn();
-      this.statusEl.textContent = '拖动白色区域选择保留的片段';
+      this.statusEl.textContent = '点击波形移动光标，拖动白色区域选择保留的片段';
     } catch (err) {
       this.statusEl.textContent = '加载失败：' + err.message;
     }
@@ -157,6 +165,19 @@ class AudioTrimmer {
     this.durationInput.value = this.formatTime(endTime - startTime);
   }
 
+  // 更新光标位置
+  updateCursor() {
+    this.cursor.style.left = (this.cursorPos * 100) + '%';
+  }
+
+  // 点击波形移动光标
+  moveCursorTo(e) {
+    const rect = this.canvas.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / rect.width;
+    this.cursorPos = Math.max(0, Math.min(1, x));
+    this.updateCursor();
+  }
+
   formatTime(seconds) {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -171,6 +192,7 @@ class AudioTrimmer {
     this.dragStartX = e.clientX || e.touches[0].clientX;
     this.dragStartSelectStart = this.selectStart;
     this.dragStartSelectEnd = this.selectEnd;
+    this.dragStartCursorPos = this.cursorPos;
   }
 
   onDrag(e) {
@@ -194,6 +216,10 @@ class AudioTrimmer {
       if (newStart + range > 1) newStart = 1 - range;
       this.selectStart = newStart;
       this.selectEnd = newStart + range;
+    } else if (this.dragTarget === 'cursor') {
+      this.cursorPos = Math.max(0, Math.min(1, this.dragStartCursorPos + delta));
+      this.updateCursor();
+      return; // 光标移动不需要更新选区
     }
 
     this.updateSelection();
@@ -218,28 +244,56 @@ class AudioTrimmer {
     this.playPauseBtn.textContent = this.isPlaying ? '⏸' : '▶';
   }
 
-  // 预览选区
+  // 预览：从光标位置开始播放选区
   preview() {
     this.stopPlayback();
     if (!this.audioBuffer || !this.audioContext) return;
 
-    const startTime = this.selectStart * this.audioBuffer.duration;
-    const endTime = this.selectEnd * this.audioBuffer.duration;
-    const duration = endTime - startTime;
+    const duration = this.audioBuffer.duration;
+    const selStart = this.selectStart * duration;
+    const selEnd = this.selectEnd * duration;
+
+    // 光标位置必须在选区内
+    let startPos = this.cursorPos * duration;
+    if (startPos < selStart) startPos = selStart;
+    if (startPos >= selEnd) startPos = selStart;
+
+    const playDuration = selEnd - startPos;
 
     this.sourceNode = this.audioContext.createBufferSource();
     this.sourceNode.buffer = this.audioBuffer;
-    this.sourceNode.start(0, startTime, duration);
+    this.sourceNode.start(0, startPos, playDuration);
     this.sourceNode.connect(this.audioContext.destination);
 
     this.isPlaying = true;
+    this.playStartTime = this.audioContext.currentTime;
+    this.playStartPos = startPos;
+    this.playDuration = playDuration;
     this.updatePlayPauseBtn();
+    this.animateCursor();
 
     this.sourceNode.onended = () => {
       this.sourceNode = null;
       this.isPlaying = false;
       this.updatePlayPauseBtn();
+      cancelAnimationFrame(this.animFrame);
+      this.cursorPos = this.selectStart;
+      this.updateCursor();
     };
+  }
+
+  // 光标跟随播放进度移动
+  animateCursor() {
+    if (!this.isPlaying) return;
+
+    const elapsed = this.audioContext.currentTime - this.playStartTime;
+    const progress = elapsed / this.playDuration;
+    this.cursorPos = this.selectStart + progress * (this.selectEnd - this.selectStart);
+    this.updateCursor();
+
+    if (progress < 1) {
+      this.animFrame = requestAnimationFrame(() => this.animateCursor());
+    }
   }
 
   // 停止播放
@@ -249,6 +303,7 @@ class AudioTrimmer {
       this.sourceNode = null;
     }
     this.isPlaying = false;
+    cancelAnimationFrame(this.animFrame);
     this.updatePlayPauseBtn();
   }
 
