@@ -43,7 +43,6 @@ class AudioTrimmer {
     });
 
     // ===== 鼠标事件 =====
-    // 选区手柄
     this.handleLeft.addEventListener('mousedown', (e) => { e.stopPropagation(); this.startDrag(e, 'left'); });
     this.handleRight.addEventListener('mousedown', (e) => { e.stopPropagation(); this.startDrag(e, 'right'); });
     this.selection.addEventListener('mousedown', (e) => {
@@ -56,7 +55,7 @@ class AudioTrimmer {
     // 点击波形移动光标
     this.canvas.addEventListener('mousedown', (e) => {
       e.preventDefault();
-      this.moveCursorToMouse(e);
+      this.setCursorFromMouse(e);
       this.startDrag(e, 'cursor');
     });
 
@@ -72,7 +71,7 @@ class AudioTrimmer {
     this.cursor.addEventListener('touchstart', (e) => { e.stopPropagation(); this.startDrag(e, 'cursor'); }, { passive: false });
     this.canvas.addEventListener('touchstart', (e) => {
       e.preventDefault();
-      this.moveCursorToTouch(e);
+      this.setCursorFromTouch(e);
       this.startDrag(e, 'cursor');
     }, { passive: false });
 
@@ -82,6 +81,11 @@ class AudioTrimmer {
     // 按钮
     this.playPauseBtn.addEventListener('click', () => this.togglePlayPause());
     this.saveBtn.addEventListener('click', () => this.save());
+  }
+
+  // 把光标限制在选区内
+  clampCursor(pos) {
+    return Math.max(this.selectStart, Math.min(this.selectEnd, pos));
   }
 
   // 打开剪辑面板
@@ -166,15 +170,17 @@ class AudioTrimmer {
     this.cursor.style.left = (this.cursorPos * 100) + '%';
   }
 
-  moveCursorToMouse(e) {
+  setCursorFromMouse(e) {
     const rect = this.canvas.getBoundingClientRect();
-    this.cursorPos = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    const pos = (e.clientX - rect.left) / rect.width;
+    this.cursorPos = this.clampCursor(pos);
     this.updateCursor();
   }
 
-  moveCursorToTouch(e) {
+  setCursorFromTouch(e) {
     const rect = this.canvas.getBoundingClientRect();
-    this.cursorPos = Math.max(0, Math.min(1, (e.touches[0].clientX - rect.left) / rect.width));
+    const pos = (e.touches[0].clientX - rect.left) / rect.width;
+    this.cursorPos = this.clampCursor(pos);
     this.updateCursor();
   }
 
@@ -187,6 +193,10 @@ class AudioTrimmer {
   // ===== 拖动 =====
   startDrag(e, target) {
     e.preventDefault();
+    // 拖动光标时，如果正在播放就暂停
+    if (target === 'cursor' && this.isPlaying) {
+      this.pause();
+    }
     this.isDragging = true;
     this.dragTarget = target;
     this.dragStartX = e.clientX || (e.touches && e.touches[0] && e.touches[0].clientX);
@@ -206,8 +216,13 @@ class AudioTrimmer {
 
     if (this.dragTarget === 'left') {
       this.selectStart = Math.max(0, Math.min(this.selectEnd - 0.01, this.dragStartSelectStart + delta));
+      // 光标不能超出新选区
+      this.cursorPos = this.clampCursor(this.cursorPos);
+      this.updateCursor();
     } else if (this.dragTarget === 'right') {
       this.selectEnd = Math.min(1, Math.max(this.selectStart + 0.01, this.dragStartSelectEnd + delta));
+      this.cursorPos = this.clampCursor(this.cursorPos);
+      this.updateCursor();
     } else if (this.dragTarget === 'body') {
       const range = this.dragStartSelectEnd - this.dragStartSelectStart;
       let s = this.dragStartSelectStart + delta;
@@ -215,9 +230,13 @@ class AudioTrimmer {
       if (s + range > 1) s = 1 - range;
       this.selectStart = s;
       this.selectEnd = s + range;
-    } else if (this.dragTarget === 'cursor') {
-      this.cursorPos = Math.max(0, Math.min(1, this.dragStartCursorPos + delta));
+      this.cursorPos = this.clampCursor(this.cursorPos);
       this.updateCursor();
+    } else if (this.dragTarget === 'cursor') {
+      const newPos = this.dragStartCursorPos + delta;
+      this.cursorPos = this.clampCursor(newPos);
+      this.updateCursor();
+      this.pauseTime = this.cursorPos * this.audioBuffer.duration;
       return;
     }
     this.updateSelection();
@@ -245,54 +264,54 @@ class AudioTrimmer {
   play() {
     if (!this.audioBuffer || !this.audioContext) return;
 
-    // 如果已经是暂停状态，恢复播放
+    // 恢复暂停状态
     if (this.pauseTime !== undefined) {
-      this.sourceNode = this.audioContext.createBufferSource();
-      this.sourceNode.buffer = this.audioBuffer;
-      const remaining = this.playEndTime - this.pauseTime;
-      this.sourceNode.start(0, this.pauseTime, remaining);
-      this.sourceNode.connect(this.audioContext.destination);
-      this.playStartTime = this.audioContext.currentTime;
-      this.playStartPos = this.pauseTime;
-      this.playDuration = remaining;
-      this.isPlaying = true;
-      this.updatePlayPauseBtn();
-      this.animateCursor();
-      this.sourceNode.onended = () => this.onPlayEnd();
-      delete this.pauseTime;
-      return;
+      const dur = this.audioBuffer.duration;
+      const startPos = this.clampCursor(this.pauseTime / dur) * dur;
+      const endPos = this.selectEnd * dur;
+      if (startPos >= endPos) {
+        // 光标在选区末尾，从头开始
+        return this.playFrom(this.selectStart * dur);
+      }
+      return this.playFrom(startPos);
     }
 
-    // 从光标位置开始播放
+    // 从光标位置开始
+    this.playFrom(this.cursorPos * this.audioBuffer.duration);
+  }
+
+  playFrom(startPos) {
     const dur = this.audioBuffer.duration;
-    let startPos = this.cursorPos * dur;
+    const endPos = this.selectEnd * dur;
+    const playDuration = endPos - startPos;
+
+    if (playDuration <= 0) return;
 
     this.sourceNode = this.audioContext.createBufferSource();
     this.sourceNode.buffer = this.audioBuffer;
-    this.sourceNode.start(0, startPos);
+    this.sourceNode.start(0, startPos, playDuration);
     this.sourceNode.connect(this.audioContext.destination);
 
     this.playStartTime = this.audioContext.currentTime;
     this.playStartPos = startPos;
-    this.playDuration = dur - startPos;
-    this.playEndTime = dur;
+    this.playDuration = playDuration;
     this.isPlaying = true;
     this.updatePlayPauseBtn();
     this.animateCursor();
 
     this.sourceNode.onended = () => this.onPlayEnd();
+    delete this.pauseTime;
   }
 
-  // 暂停（保留光标位置）
+  // 暂停
   pause() {
     if (this.sourceNode) {
       try { this.sourceNode.stop(); } catch (e) {}
       this.sourceNode = null;
     }
-    // 记录暂停时的位置
     const elapsed = this.audioContext.currentTime - this.playStartTime;
     this.pauseTime = this.playStartPos + elapsed;
-    this.cursorPos = this.pauseTime / this.audioBuffer.duration;
+    this.cursorPos = this.clampCursor(this.pauseTime / this.audioBuffer.duration);
     this.updateCursor();
 
     this.isPlaying = false;
@@ -303,10 +322,12 @@ class AudioTrimmer {
   onPlayEnd() {
     this.sourceNode = null;
     this.isPlaying = false;
+    // 光标停在选区末尾
+    this.cursorPos = this.selectEnd;
+    this.updateCursor();
     delete this.pauseTime;
     cancelAnimationFrame(this.animFrame);
     this.updatePlayPauseBtn();
-    // 光标停在结束位置，不回弹
   }
 
   stopPlayback() {
@@ -320,13 +341,14 @@ class AudioTrimmer {
     this.updatePlayPauseBtn();
   }
 
-  // 光标跟随播放进度
+  // 光标跟随播放（限制在选区内）
   animateCursor() {
     if (!this.isPlaying) return;
     const elapsed = this.audioContext.currentTime - this.playStartTime;
     const progress = elapsed / this.playDuration;
     if (progress >= 1) return;
-    this.cursorPos = this.playStartPos / this.audioBuffer.duration + progress * (this.playDuration / this.audioBuffer.duration);
+    const rawPos = this.playStartPos / this.audioBuffer.duration + progress * (this.playDuration / this.audioBuffer.duration);
+    this.cursorPos = this.clampCursor(rawPos);
     this.updateCursor();
     this.animFrame = requestAnimationFrame(() => this.animateCursor());
   }
