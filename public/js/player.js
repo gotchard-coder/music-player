@@ -38,12 +38,14 @@ class MusicPlayer {
     this.totalCount = 0;                // 歌曲总数
     this.hasMore = false;               // 是否还有更多歌曲
     this.isLoadingMore = false;         // 是否正在加载更多
+    this.userInteracted = false;        // 用户是否已交互（用于绕过自动播放限制）
 
     this.initElements();                // 获取页面上的DOM元素
     this.initEvents();                  // 绑定事件监听器
     this.initMediaSession();            // 初始化MediaSession（通知栏控制）
     this.initInfiniteScroll();          // 初始化无限滚动
     this.restoreState();                // 恢复上次播放状态
+    this.initUserInteraction();         // 监听用户交互
   }
 
   // 防止XSS攻击：将文本转为HTML安全格式
@@ -193,6 +195,41 @@ class MusicPlayer {
           break;
       }
     });
+  }
+
+  // 监听用户交互，标记已交互（用于绕过自动播放限制）
+  initUserInteraction() {
+    const markInteracted = () => { this.userInteracted = true; };
+    ['click', 'touchstart', 'keydown'].forEach(evt => {
+      document.addEventListener(evt, markInteracted, { once: true });
+    });
+    // 也从 localStorage 恢复标记
+    if (localStorage.getItem('music-player-interacted') === '1') {
+      this.userInteracted = true;
+    }
+  }
+
+  // 标记用户已交互并保存
+  markInteracted() {
+    this.userInteracted = true;
+    localStorage.setItem('music-player-interacted', '1');
+  }
+
+  // 安全播放（绕过自动播放限制）
+  safePlay() {
+    const playPromise = this.audio.play();
+    if (playPromise) {
+      playPromise.catch(() => {
+        // 被阻止了，等用户下次交互时再播放
+        const resume = () => {
+          this.audio.play().catch(() => {});
+          document.removeEventListener('click', resume);
+          document.removeEventListener('touchstart', resume);
+        };
+        document.addEventListener('click', resume);
+        document.addEventListener('touchstart', resume);
+      });
+    }
   }
 
   // 初始化MediaSession（系统通知栏控制）
@@ -465,7 +502,8 @@ class MusicPlayer {
 
   // 播放
   play() {
-    this.audio.play().catch(() => this.scheduleResume());
+    this.markInteracted();
+    this.safePlay();
   }
 
   // 暂停
@@ -618,7 +656,7 @@ class MusicPlayer {
     if (this.playMode === 'single') {
       // 单曲循环：重新播放当前歌曲
       this.audio.currentTime = 0;
-      this.audio.play().catch(() => this.scheduleResume());
+      this.safePlay();
     } else {
       // 其他模式：播放下一曲
       this.next();
@@ -683,10 +721,9 @@ class MusicPlayer {
     if (this._resumeListener) return; // 已经注册过就不重复注册
     this._resumeListener = () => {
       if (document.visibilityState === 'visible' && !this.isPlaying) {
-        // 页面重新可见且没有在播放，自动恢复播放
         document.removeEventListener('visibilitychange', this._resumeListener);
         this._resumeListener = null;
-        this.audio.play().catch(() => {});
+        this.safePlay();
       }
     };
     document.addEventListener('visibilitychange', this._resumeListener);
@@ -844,7 +881,7 @@ class MusicPlayer {
             this.songTitle.textContent = nextSong.title;
             this.songArtist.textContent = nextSong.original_name;
             this.updateMediaSession(nextSong);
-            this.audio.play().catch(() => this.scheduleResume());
+            this.safePlay();
           } else {
             this.currentIndex = -1;
             this.audio.pause();
