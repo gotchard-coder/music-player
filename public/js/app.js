@@ -169,8 +169,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         // 添加到歌单：显示歌单列表子菜单
         showAddToPlaylistMenu(songId, contextMenu);
       } else if (action === 'delete') {
-        // 删除歌曲
-        player.deleteSong(songId);
+        // 删除歌曲：全部歌曲中删除=真正删除；歌单中删除=仅从该歌单移除
+        if (playlistManager.currentPlaylistId === null) {
+          // 当前在"全部歌曲"视图，真正删除歌曲
+          player.deleteSong(songId);
+        } else {
+          // 当前在某个歌单视图，仅从该歌单移除
+          playlistManager.removeSongFromPlaylist(playlistManager.currentPlaylistId, songId);
+        }
       }
     });
   });
