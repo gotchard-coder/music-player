@@ -43,6 +43,7 @@ class MusicPlayer {
     this.initEvents();                  // 绑定事件监听器
     this.initMediaSession();            // 初始化MediaSession（通知栏控制）
     this.initInfiniteScroll();          // 初始化无限滚动
+    this.restoreState();                // 恢复上次播放状态
   }
 
   // 防止XSS攻击：将文本转为HTML安全格式
@@ -267,13 +268,13 @@ class MusicPlayer {
       }
 
       this.songs = this.allSongs; // 设置歌曲列表
-      this.currentIndex = -1;     // 重置播放索引
       this.totalCount = this.allSongs.length;
       const countEl = document.getElementById('songCount');
       if (countEl) countEl.textContent = this.totalCount + ' 首';
       this.currentPage = 1;
       this.hasMore = false;
       this.renderList();
+      this.applyRestoreState(); // 恢复上次播放状态
     } catch (err) {
       console.error('加载歌曲失败:', err);
     }
@@ -417,20 +418,20 @@ class MusicPlayer {
 
   // 播放指定索引的歌曲
   playIndex(index) {
-    if (index < 0 || index >= this.songs.length) return; // 索引无效就不处理
-    // 点击当前正在播放的歌曲，切换播放/暂停
+    if (index < 0 || index >= this.songs.length) return;
     if (index === this.currentIndex && this.audio.src) {
       this.togglePlay();
       return;
     }
-    this.currentIndex = index; // 记录当前播放索引
-    const song = this.songs[index]; // 获取歌曲
-    this.audio.src = `/api/stream/${song.id}`; // 设置音频源（从服务器流式播放）
-    this.songTitle.textContent = song.title; // 显示歌曲标题
-    this.songArtist.textContent = song.original_name; // 显示歌手名称
-    this.renderList(document.getElementById('searchInput').value); // 重新渲染列表（更新高亮）
-    this.updateMediaSession(song); // 更新通知栏信息
-    this.audio.play().catch(() => this.scheduleResume()); // 开始播放
+    this.currentIndex = index;
+    const song = this.songs[index];
+    this.audio.src = `/api/stream/${song.id}`;
+    this.songTitle.textContent = song.title;
+    this.songArtist.textContent = song.original_name;
+    this.renderList(document.getElementById('searchInput').value);
+    this.updateMediaSession(song);
+    this.audio.play().catch(() => this.scheduleResume());
+    this.saveState(); // 保存播放状态
   }
 
   // 更新MediaSession（通知栏信息）
@@ -470,6 +471,69 @@ class MusicPlayer {
   // 暂停
   pause() {
     this.audio.pause();
+    this.saveState();
+  }
+
+  // 保存播放状态到 localStorage
+  saveState() {
+    if (this.currentIndex >= 0 && this.songs[this.currentIndex]) {
+      const song = this.songs[this.currentIndex];
+      const state = {
+        songId: song.id,
+        currentTime: this.audio.currentTime,
+        playMode: this.playMode,
+        playlistId: window.playlistManager ? window.playlistManager.currentPlaylistId : null
+      };
+      localStorage.setItem('music-player-state', JSON.stringify(state));
+    }
+  }
+
+  // 恢复上次播放状态
+  restoreState() {
+    try {
+      const saved = localStorage.getItem('music-player-state');
+      if (!saved) return;
+      const state = JSON.parse(saved);
+      // 等歌曲列表加载完再恢复
+      this._restoreState = state;
+    } catch (e) {}
+  }
+
+  // 在歌曲列表加载完后调用，恢复播放
+  applyRestoreState() {
+    if (!this._restoreState) return;
+    const state = this._restoreState;
+    delete this._restoreState;
+
+    // 找到歌曲
+    const songIndex = this.songs.findIndex(s => s.id === state.songId);
+    if (songIndex === -1) return;
+
+    // 设置播放模式
+    if (state.playMode) {
+      this.playMode = state.playMode;
+      this.updatePlayModeUI();
+    }
+
+    // 加载歌曲但不播放，恢复进度
+    this.currentIndex = songIndex;
+    const song = this.songs[songIndex];
+    this.audio.src = `/api/stream/${song.id}`;
+    this.songTitle.textContent = song.title;
+    this.songArtist.textContent = song.original_name;
+    this.renderList(document.getElementById('searchInput').value);
+
+    // 恢复播放位置
+    this.audio.addEventListener('loadedmetadata', () => {
+      if (state.currentTime > 0) {
+        this.audio.currentTime = state.currentTime;
+      }
+    }, { once: true });
+
+    // 定期保存状态
+    this.audio.addEventListener('timeupdate', () => {
+      if (this.isPlaying) this.saveState();
+    });
   }
 
   // 上一曲
@@ -695,6 +759,23 @@ class MusicPlayer {
       this.playMode = 'single'; // 切换到单曲循环
       this.repeatBtn.classList.add('active');
       this.repeatBtn.textContent = '↻₁';
+    }
+  }
+
+  // 更新播放模式UI
+  updatePlayModeUI() {
+    if (this.playMode === 'random') {
+      this.shuffleBtn.classList.add('active');
+      this.repeatBtn.classList.remove('active');
+      this.repeatBtn.textContent = '↻';
+    } else if (this.playMode === 'single') {
+      this.shuffleBtn.classList.remove('active');
+      this.repeatBtn.classList.add('active');
+      this.repeatBtn.textContent = '↻₁';
+    } else {
+      this.shuffleBtn.classList.remove('active');
+      this.repeatBtn.classList.remove('active');
+      this.repeatBtn.textContent = '↻';
     }
   }
 
